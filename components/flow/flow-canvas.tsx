@@ -6,43 +6,71 @@ import ReactFlow, {
   Controls,
   Connection,
   Edge,
-  OnNodesChange,
+  NodeChange,
   applyNodeChanges,
+  Panel,
+  Node as ReactFlowNode,
+  NodeProps,
+  NodeTypes,
+  MarkerType,
+  ConnectionMode,
+  useEdgesState,
+  addEdge,
+  EdgeChange,
+  applyEdgeChanges,
 } from 'reactflow';
+import { Node, NodeType } from '@/lib/types/flow';
 import 'reactflow/dist/style.css';
 import { useFlowStore } from '@/lib/stores/flow-store';
-import { usePDFStore } from '@/lib/stores/pdf-store';
-import { PromptNode } from '@/components/flow/prompt-node';
-import { FlowToolbar } from '@/components/flow/flow-toolbar';
+import { FlowNode } from '@/components/flow/flow-node';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
-const nodeTypes = {
-  prompt: PromptNode,
+const nodeTypes: NodeTypes = {
+  product: FlowNode,
+  external: FlowNode,
+  context: FlowNode,
 };
 
-const INITIAL_NODE_POSITION = { x: 100, y: 100 };
-const NODE_SPACING = 300; // Reduced vertical spacing
+const flowStyle = {
+  backgroundColor: 'var(--background)',
+  width: '100vw',
+  height: '100vh',
+};
+
+const defaultEdgeOptions = {
+  type: 'bezier',
+  animated: true,
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 20,
+    height: 20,
+    color: '#666666',
+  },
+  style: {
+    strokeWidth: 2,
+    stroke: '#666666',
+  },
+  selectedStyle: {
+    stroke: '#0ea5e9',
+    strokeWidth: 3,
+  },
+} as const;
 
 export function FlowCanvas() {
   const {
     nodes,
     edges,
-    addNode,
     updateNodes,
-    updateNodeResults,
-    setNodeProcessing,
-    setNodeError,
     connectNodes,
     removeNode,
     removeEdge,
   } = useFlowStore();
 
-  const { generateResponse, uploadedFiles } = usePDFStore();
-
   const onNodesChange = useCallback(
-    (changes) => {
-      const updatedNodes = applyNodeChanges(changes, nodes);
-      updateNodes(updatedNodes);
+    (changes: NodeChange[]) => {
+      const updatedNodes = applyNodeChanges(changes, nodes as any);
+      updateNodes(updatedNodes as Node[]);
     },
     [nodes, updateNodes]
   );
@@ -50,99 +78,88 @@ export function FlowCanvas() {
   const onConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
+        // 检查是否已存在连接
+        const existingEdge = edges.find(
+          edge => edge.source === connection.source && edge.target === connection.target
+        );
+        
+        if (existingEdge) {
+          toast.error('节点已经连接');
+          return;
+        }
+        
         connectNodes(connection.source, connection.target);
+        toast.success('节点连接成功');
       }
     },
-    [connectNodes]
+    [connectNodes, edges]
   );
 
-  const handleAddNode = () => {
-    const offset = nodes.length * NODE_SPACING;
-    const position = {
-      x: INITIAL_NODE_POSITION.x,
-      y: INITIAL_NODE_POSITION.y + offset,
-    };
-    addNode(position);
-  };
-
-  const executeFlow = async () => {
-    if (!uploadedFiles.length) {
-      toast.error('Please upload at least one PDF first');
-      return;
-    }
-
-    const startNodes = nodes.filter(
-      (node) => !edges.some((edge) => edge.target === node.id)
-    );
-
-    if (startNodes.length === 0) {
-      toast.error('Please add at least one node to the canvas');
-      return;
-    }
-
-    for (const node of startNodes) {
-      await executeNode(node.id);
-    }
-  };
-
-  const executeNode = async (nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node?.data.prompt) {
-      toast.error('Please enter a prompt in all nodes');
-      return;
-    }
-
-    try {
-      setNodeProcessing(nodeId, true);
-      setNodeError(nodeId, '');
-
-      const results = await Promise.all(
-        uploadedFiles.map(async (file) => {
-          const result = await generateResponse(node.data.prompt, file.id);
-          return result;
-        })
-      );
-
-      updateNodeResults(nodeId, results);
-
-      const connectedEdges = edges.filter((edge) => edge.source === nodeId);
-      for (const edge of connectedEdges) {
-        await executeNode(edge.target);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-      setNodeError(nodeId, errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setNodeProcessing(nodeId, false);
-    }
-  };
-
   return (
-    <div className="h-full w-full relative">
-      <FlowToolbar onAddNode={handleAddNode} onExecuteFlow={executeFlow} />
+    <div className="h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
-        onNodesDelete={nodes => nodes.forEach(node => removeNode(node.id))}
-        onEdgesDelete={edges => edges.forEach(edge => removeEdge(edge.id))}
+        onNodesDelete={nodes => {
+          nodes.forEach(node => removeNode(node.id));
+          toast.success('节点删除成功');
+        }}
+        onEdgesDelete={edges => {
+          edges.forEach(edge => removeEdge(edge.id));
+          toast.success('连线删除成功');
+        }}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
+        connectionMode={ConnectionMode.Loose}
         minZoom={0.1}
         maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         fitView
+        style={flowStyle}
+        className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        deleteKeyCode={['Backspace', 'Delete']}
+        multiSelectionKeyCode={['Meta', 'Shift']}
+        selectionKeyCode="Shift"
       >
-        <Background />
+        <Background color="#999" gap={16} />
         <Controls />
+        <Panel position="top-right" className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const flowInstance = document.querySelector('.react-flow__viewport') as HTMLElement;
+              if (flowInstance) {
+                flowInstance.style.transform = 'translate(0px, 0px) scale(1)';
+                window.dispatchEvent(new Event('resize'));
+              }
+            }}
+          >
+            重置视图
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const viewport = document.querySelector('.react-flow-viewport') as HTMLElement;
+              if (viewport) {
+                viewport.style.transform = 'translate(0px, 0px) scale(1)';
+                window.dispatchEvent(new Event('resize'));
+              }
+            }}
+          >
+            重置视图
+          </Button>
+        </Panel>
       </ReactFlow>
 
       {nodes.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-background/50 backdrop-blur">
           <div className="text-center space-y-4 text-muted-foreground">
-            <p className="text-lg">Your canvas is empty</p>
-            <p className="text-sm">Click the &quot;Add Node&quot; button to get started</p>
+            <p className="text-lg font-medium">画布为空</p>
+            <p className="text-sm">请在上方输入框中输入您的需求</p>
           </div>
         </div>
       )}

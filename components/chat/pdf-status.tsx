@@ -3,8 +3,8 @@
 import { FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatFileSize } from "@/lib/utils";
-import type { UploadedFile } from "@/lib/types";
+import { formatFileSize } from "@/lib/utils/common";
+import type { UploadedFile } from "@/lib/types/common";
 
 interface PDFStatusProps {
   file: UploadedFile;

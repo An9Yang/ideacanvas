@@ -44,6 +44,7 @@ export async function uploadPDFAndAttachToThread(file: File, threadId: string) {
   await client.beta.threads.messages.create(threadId, {
     role: "user",
     content: "I've uploaded a PDF document for analysis. Please confirm you can access it.",
+    // @ts-ignore - OpenAI API supports file_ids but type definition is outdated
     file_ids: [uploadedFile.id]
   });
 

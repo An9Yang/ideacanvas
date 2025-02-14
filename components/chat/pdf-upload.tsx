@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Card } from "@/components/ui/card";
 import { FileText, Upload } from "lucide-react";
-import type { UploadedFile } from "@/lib/types";
+import type { UploadedFile } from "@/lib/types/common";
 
 interface PDFUploadProps {
   onUpload: (file: File) => void;
