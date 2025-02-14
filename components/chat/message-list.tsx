@@ -1,6 +1,6 @@
 "use client";
 
-import { Message } from "@/lib/types";
+import { Message } from "@/lib/types/common";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";

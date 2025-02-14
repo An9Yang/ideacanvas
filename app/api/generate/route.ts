@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const preferredRegion = 'auto';
 import OpenAI from 'openai';
 import { config } from '@/lib/config';
 
 const openai = new OpenAI({
-  apiKey: config.openai.apiKey,
+  apiKey: config.openai.apiKey ?? '',
   dangerouslyAllowBrowser: true,
 });
 
@@ -68,8 +71,12 @@ export async function POST(request: Request) {
       const messages = await openai.beta.threads.messages.list(thread.id);
       const lastMessage = messages.data[0];
 
+      const content = lastMessage.content[0];
+      if (content.type !== 'text') {
+        throw new Error('Expected text content');
+      }
       return NextResponse.json({
-        text: lastMessage.content[0].text.value
+        text: content.text.value
       });
     } else {
       throw new Error(`Run failed with status: ${runStatus.status}`);

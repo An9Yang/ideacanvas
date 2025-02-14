@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Message } from '@/lib/types';
+import { Message } from '@/lib/types/common';
 import { createAssistant, createThread, uploadPDFAndAttachToThread, sendMessage, getMessages } from '@/lib/services/chat-service';
 
 interface ChatState {
