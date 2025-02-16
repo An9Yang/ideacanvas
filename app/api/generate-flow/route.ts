@@ -1,112 +1,24 @@
 import { NextResponse } from 'next/server';
+import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
-import { OpenAIClient, AzureKeyCredential } from '@azure/openai';
 
+// 请在 SYSTEM_PROMPT 中强调返回的 JSON 格式必须严格合法，使用英文双引号，不得出现多余符号或省略号
 const SYSTEM_PROMPT = `你是一个专业的产品设计助手。根据用户的需求，生成一个完整的产品流程图。这个流程图的内容将作为 AI coding 工具的输入，用于自动生成相应的页面和功能。
 
 请遵循以下规则：
-1. 输出必须是一个合法的JSON对象，包含nodes和edges两个数组
-
+1. 输出必须是一个合法的JSON对象，包含nodes和edges两个数组，所有字符串必须使用英文双引号，不允许使用中文全角引号，不得出现多余的冒号或省略号。
 2. 每个节点必须包含以下字段：
-   - type: 节点类型，必须是以下之一：
-     * 'product': 产品功能/页面（白色）
-     * 'external': 外部资源/服务（蓝色）
-     * 'context': 上下文信息（黄色）
-   - title: 节点标题，简短的中文描述，必须唯一
-   - content: 详细的中文描述，必须包含以下部分：
-     1. 页面描述
-        - 此页面的主要功能和目的
-
-     2. UI组件
-        a) 布局结构
-           - 页面整体布局（例如：两栏布局、网格布局等）
-           - 响应式设计要求
-           - 组件排列方式
-
-        b) 核心组件
-           - 类型：（按钮、输入框、列表等）
-           - 位置：组件在页面中的位置
-           - 样式：尺寸、颜色、字体、边框等
-           - 状态：默认、悬停、点击等状态的样式
-           - 交互：点击、输入等事件的处理
-
-     3. 数据结构
-        a) 输入数据
-           - 数据字段和类型
-           - 验证规则
-           - 默认值
-
-        b) 输出数据
-           - 数据字段和格式
-           - 处理规则
-
-     4. 交互逻辑
-        a) 用户操作流程
-           - 触发条件
-           - 执行操作
-           - 反馈方式
-           - 异常处理
-
-        b) 状态管理
-           - 页面状态
-           - 数据状态
-           - 加载状态
-           - 错误状态
-
-     5. API 集成
-        - 接口路径
-        - 请求方法
-        - 请求参数
-        - 响应处理
-
-     6. 性能优化
-        - 懒加载策略
-        - 缓存策略
-        - 防抖/节流处理
-
-     7. 异常处理
-        - 错误类型
-        - 错误提示
-        - 恢复策略
-
-     8. 扩展性设计
-        - 可配置项
-        - 主题支持
-        - 国际化支持
-   - position: 节点位置，包含x和y坐标，请严格遵循以下规则：
-     * 主流程从左到右排列，每个主要步骤间距600像素
-     * 第一个节点从 x=200 开始，然后每个主流程节点 x 增加 600
-     * 第一行从 y=200 开始，每行间距300像素
-     * 每个节点必须至少与其他节点保持300像素的间距
-     * 上下文节点（context类型）必须在最上方一行
-     * 外部服务节点（external类型）必须在最右边一列
-     * 并行的功能应该在同一列不同行
-     * 注意避免节点重叠和交叉
-
-3. 每个边必须包含以下字段：
-   - source: 源节点的标题
-   - target: 目标节点的标题
-   - description: 详细描述节点间的关系，必须包含以下部分：
-     1. 跳转触发
-        - 触发条件：什么情况下触发跳转
-        - 触发方式：自动跳转还是用户操作
-
-     2. 数据传递
-        - 传递数据：需要传递哪些数据
-        - 数据格式：数据的格式和结构
-        - 处理方式：数据如何处理和转换
-
-     3. 状态变化
-        - 源节点：源节点的状态变化
-        - 目标节点：目标节点的初始状态
-
-     4. 异常处理
-        - 异常情况：可能出现的异常
-        - 处理方式：如何处理异常
-        - 回退策略：如何进行回退
-
+   - type: 节点类型，取值必须为 "product"、"external" 或 "context"。
+   - title: 节点标题，简短的描述，且必须唯一。
+   - content: 详细描述，要求是字符串，不得嵌套其他对象或省略部分内容。
+   - position: 节点位置，必须包含 x 和 y 两个数值。
+3. 每条边必须包含以下字段：
+   - source: 源节点的标题。
+   - target: 目标节点的标题。
+   - description: （可选）描述两节点之间的关系。
 示例输出：
 {
   "nodes": [
@@ -136,11 +48,21 @@ const SYSTEM_PROMPT = `你是一个专业的产品设计助手。根据用户的
     }
   ],
   "edges": [
-    { "source": "项目背景", "target": "待办列表" },
-    { "source": "待办列表", "target": "任务详情" },
-    { "source": "任务详情", "target": "通知服务" }
+    { "source": "项目背景", "target": "待办列表", "description": "从项目背景跳转到待办列表" },
+    { "source": "待办列表", "target": "任务详情", "description": "点击待办项跳转到任务详情" },
+    { "source": "任务详情", "target": "通知服务", "description": "任务详情中触发通知服务提醒任务到期" }
   ]
 }`;
+
+function fixInvalidJSON(jsonStr: string): string {
+  // 替换中文全角引号为英文双引号
+  jsonStr = jsonStr.replace(/“|”/g, '"');
+  // 将多余的冒号 (如 "类型":: ) 替换为单个冒号
+  jsonStr = jsonStr.replace(/":\s*:/g, '":');
+  // 去除省略号
+  jsonStr = jsonStr.replace(/\.\.\./g, '');
+  return jsonStr;
+}
 
 export async function POST(request: Request) {
   try {
@@ -152,10 +74,7 @@ export async function POST(request: Request) {
     const apiKey = process.env.AZURE_OPENAI_API_KEY!;
     const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME!;
 
-    console.log('Azure OpenAI config:', {
-      endpoint,
-      deploymentName,
-    });
+    console.log('Azure OpenAI config:', { endpoint, deploymentName });
 
     const client = new OpenAIClient(
       endpoint,
@@ -178,59 +97,132 @@ export async function POST(request: Request) {
 
     console.log('Azure OpenAI response:', response);
 
-    try {
-      const content = response.choices[0].message?.content;
-      console.log('Raw AI response content:', content);
-      
-      if (!content) {
-        console.error('Empty response content from AI');
-        return NextResponse.json(
-          { error: 'Empty response from AI' },
-          { status: 500 }
-        );
-      }
+    const content = response.choices[0].message?.content;
+    console.log('Raw AI response content:', content);
 
-      // 处理可能被包裹在代码块中的JSON
-      let cleanedContent = content.trim();
-      
-      // 尝试找到JSON对象的开始位置
-      const jsonStart = cleanedContent.indexOf('{');
-      if (jsonStart === -1) {
-        console.error('No JSON object found in response');
-        return NextResponse.json(
-          { error: 'Invalid response format from AI', details: 'No JSON object found' },
-          { status: 500 }
-        );
-      }
-      cleanedContent = cleanedContent.substring(jsonStart);
-      
-      // 如果有代码块结尾标记，移除它
-      const jsonEnd = cleanedContent.lastIndexOf('}');
-      if (jsonEnd !== -1) {
-        cleanedContent = cleanedContent.substring(0, jsonEnd + 1);
-      }
-      
-      console.log('Cleaned content:', cleanedContent);
-      const flowData = JSON.parse(cleanedContent);
-      
-      // 验证响应格式
-      if (!flowData.nodes || !Array.isArray(flowData.nodes) || !flowData.edges || !Array.isArray(flowData.edges)) {
-        console.error('Invalid flow data structure');
-        return NextResponse.json(
-          { error: 'Invalid response format from AI', details: 'Response missing required fields' },
-          { status: 500 }
-        );
-      }
-      
-      return NextResponse.json(flowData);
-    } catch (parseError: unknown) {
-      console.error('Failed to parse AI response:', parseError);
-      const errorMessage = parseError instanceof Error ? parseError.message : 'Unknown error';
+    if (!content) {
+      console.error('Empty response content from AI');
       return NextResponse.json(
-        { error: 'Invalid response format from AI', details: errorMessage },
+        { error: 'Empty response from AI' },
         { status: 500 }
       );
     }
+
+    let cleanedContent = content.trim();
+    console.log('Trimmed content:', cleanedContent);
+
+    // 如果返回内容被代码块包裹，提取代码块内部内容
+    const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)\s*```/;
+    const codeBlockMatch = cleanedContent.match(codeBlockRegex);
+    if (codeBlockMatch) {
+      console.log('Found code block, extracting content');
+      cleanedContent = codeBlockMatch[1];
+    } else {
+      // 尝试直接提取完整 JSON 对象
+      const jsonRegex = /{[\s\S]*}/;
+      const jsonMatch = cleanedContent.match(jsonRegex);
+      if (jsonMatch) {
+        cleanedContent = jsonMatch[0];
+      } else {
+        console.error('No valid JSON object found in response');
+        return NextResponse.json(
+          { error: 'Invalid response format from AI', details: 'No valid JSON object found in response' },
+          { status: 500 }
+        );
+      }
+    }
+
+    console.log('Content before fixing:', cleanedContent);
+    // 修复常见的 JSON 格式问题（全角引号、多余冒号、省略号等）
+    cleanedContent = fixInvalidJSON(cleanedContent);
+    console.log('Content after fixing:', cleanedContent);
+
+    let flowData;
+    try {
+      flowData = JSON.parse(cleanedContent);
+      console.log('Successfully parsed JSON:', flowData);
+    } catch (parseError: any) {
+      console.error('JSON parse error:', parseError);
+      console.log('Failed content:', cleanedContent);
+      return NextResponse.json(
+        { error: 'Invalid response format from AI', details: parseError.message },
+        { status: 500 }
+      );
+    }
+
+    // 验证返回数据格式
+    if (!flowData.nodes || !Array.isArray(flowData.nodes) || !flowData.edges || !Array.isArray(flowData.edges)) {
+      console.error('Invalid flow data structure');
+      return NextResponse.json(
+        { error: 'Invalid response format from AI', details: 'Response missing required fields' },
+        { status: 500 }
+      );
+    }
+
+    // 验证每个节点的必要字段
+    for (const node of flowData.nodes) {
+      if (
+        !node.type ||
+        !node.title ||
+        !node.content ||
+        !node.position ||
+        typeof node.position.x !== 'number' ||
+        typeof node.position.y !== 'number'
+      ) {
+        console.error('Invalid node data:', node);
+        return NextResponse.json(
+          { error: 'Invalid response format from AI', details: 'Node missing required fields' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // 验证每条边的必要字段
+    for (const edge of flowData.edges) {
+      if (!edge.source || !edge.target) {
+        console.error('Invalid edge data:', edge);
+        return NextResponse.json(
+          { error: 'Invalid response format from AI', details: 'Edge missing required fields' },
+          { status: 500 }
+        );
+      }
+    }
+
+    interface AINode {
+      type: 'product' | 'external' | 'context';
+      title: string;
+      content: string;
+      position: {
+        x: number;
+        y: number;
+      };
+    }
+
+    interface AIEdge {
+      source: string;
+      target: string;
+      description?: string;
+    }
+
+    // 转换成最终格式并确保数字正确
+    const formattedData = {
+      nodes: flowData.nodes.map((node: AINode) => ({
+        type: node.type,
+        title: node.title,
+        // 如果 content 是对象，则转为字符串
+        content: typeof node.content === 'object' ? JSON.stringify(node.content) : node.content,
+        position: {
+          x: Math.round(node.position.x),
+          y: Math.round(node.position.y)
+        }
+      })),
+      edges: flowData.edges.map((edge: AIEdge) => ({
+        source: edge.source,
+        target: edge.target
+      }))
+    };
+
+    return NextResponse.json(formattedData);
   } catch (error: any) {
     console.error('Error generating flow:', error);
     return NextResponse.json(
