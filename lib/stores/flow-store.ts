@@ -5,30 +5,30 @@ import { MarkerType } from 'reactflow';
 import type { FlowState, Flow, Node, Edge, NodeResult, NodeType, HistoryState } from '@/lib/types/flow';
 import { generateFlowFromPrompt } from '@/lib/services/azure-ai';
 
-const MAX_HISTORY = 20; // 限制历史记录数量
+const MAX_HISTORY = 10; // 减少历史记录数量限制
 
-// 清理历史记录，只保留最近的记录
+// 优化清理历史记录函数
 const cleanHistory = (history: HistoryState[], currentIndex: number) => {
-  if (history.length <= MAX_HISTORY) return history;
-  
-  // 确保当前状态和一些最近的历史被保留
-  const keepStart = Math.max(0, currentIndex - Math.floor(MAX_HISTORY / 4));
-  const keepEnd = Math.min(history.length, keepStart + Math.floor(MAX_HISTORY / 2));
-  return history.slice(keepStart, keepEnd);
+  // 如果历史记录超过限制，只保留最近的记录
+  if (history.length > MAX_HISTORY) {
+    const start = Math.max(0, history.length - MAX_HISTORY);
+    return history.slice(start);
+  }
+  return history;
 };
 
-// 清理节点数据，移除不必要的字段
+// 优化节点数据清理函数
 const cleanNodeData = (nodes: Node[]) => 
   nodes.map(({ id, type, position, data }) => ({
     id,
     type,
     position: {
-      x: Math.round(position.x),
-      y: Math.round(position.y)
+      x: Math.round(position.x * 100) / 100, // 只保留两位小数
+      y: Math.round(position.y * 100) / 100
     },
     data: {
       title: data.title,
-      content: data.content
+      content: data.content?.slice(0, 1000) // 限制内容长度
     },
     draggable: true
   }));
@@ -130,7 +130,7 @@ export const useFlowStore = create<FlowState>()(
             id: uuidv4(),
             source: idMap.get(edge.source),
             target: idMap.get(edge.target),
-            type: 'bezier',
+            type: 'default',
             animated: true,
             markerEnd: {
               type: MarkerType.ArrowClosed,
@@ -174,7 +174,7 @@ export const useFlowStore = create<FlowState>()(
       updateNodes: (nodes) => {
         const { nodes: oldNodes, edges, history = [], currentHistoryIndex = -1 } = get();
         const newHistory = {
-          nodes: oldNodes,
+          nodes,
           edges,
           timestamp: Date.now(),
         };
@@ -226,7 +226,7 @@ export const useFlowStore = create<FlowState>()(
           id: uuidv4(),
           source,
           target,
-          type: 'bezier',
+          type: 'default',
           animated: true,
           markerEnd: {
             type: MarkerType.ArrowClosed,
