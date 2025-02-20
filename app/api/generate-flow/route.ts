@@ -68,9 +68,24 @@ function fixInvalidJSON(jsonStr: string): string {
   return jsonStr;
 }
 
+// 初始化 Azure OpenAI 客户端
+const endpoint = 'https://indieapp.openai.azure.com';
+const apiKey = process.env.AZURE_OPENAI_API_KEY!;
+const deploymentName = 'o3-mini';
+const apiVersion = '2024-12-01-preview';
+
+// 打印配置信息
+console.log('Azure OpenAI Configuration:', {
+  endpoint: endpoint?.replace(/\/+$/, ''),
+  deploymentName,
+  apiVersion,
+  apiKey: '***'
+});
+
+// 初始化客户端
 const client = new OpenAIClient(
-  process.env.AZURE_OPENAI_ENDPOINT!,
-  new AzureKeyCredential(process.env.AZURE_OPENAI_API_KEY!)
+  endpoint,
+  new AzureKeyCredential(apiKey)
 );
 
 interface GeneratedNode {
@@ -93,12 +108,26 @@ interface GeneratedFlow {
 export async function POST(request: Request) {
   try {
     // 验证环境变量
-    if (!process.env.AZURE_OPENAI_ENDPOINT || !process.env.AZURE_OPENAI_API_KEY || !process.env.AZURE_OPENAI_DEPLOYMENT_NAME) {
-      console.error('Missing Azure OpenAI credentials');
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
+    const requiredEnvVars = {
+      AZURE_OPENAI_ENDPOINT: process.env.AZURE_OPENAI_ENDPOINT,
+      AZURE_OPENAI_API_KEY: process.env.AZURE_OPENAI_API_KEY,
+      AZURE_OPENAI_DEPLOYMENT_NAME: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+      AZURE_OPENAI_API_VERSION: process.env.AZURE_OPENAI_API_VERSION
+    };
+
+    console.log('Environment variables:', {
+      ...requiredEnvVars,
+      AZURE_OPENAI_API_KEY: requiredEnvVars.AZURE_OPENAI_API_KEY ? '***' : undefined
+    });
+
+    const missingVars = Object.entries(requiredEnvVars)
+      .filter(([_, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingVars.length > 0) {
+      const error = `Missing required environment variables: ${missingVars.join(', ')}`;
+      console.error(error);
+      return NextResponse.json({ error }, { status: 500 });
     }
 
     // 解析请求体
@@ -118,17 +147,70 @@ export async function POST(request: Request) {
 
     // 调用 Azure OpenAI
     console.log('Generating flow for prompt:', prompt);
-    const response = await client.getChatCompletions(
-      process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
-      [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: prompt }
-      ],
-      {
-        temperature: 0.7,
-        maxTokens: 2000,
+    // 调试信息
+    console.log('API Configuration:', {
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+      deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+      apiVersion: process.env.AZURE_OPENAI_API_VERSION
+    });
+
+    let response;
+    try {
+      console.log('Making API request to:', `${endpoint}/openai/deployments/${deploymentName}/chat/completions?api-version=${apiVersion}`);
+
+      // 初始化客户端
+      const client = new OpenAIClient(
+        endpoint,
+        new AzureKeyCredential(apiKey),
+        { apiVersion }
+      );
+
+      response = await client.getChatCompletions(
+        deploymentName,
+        [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]
+      );
+    } catch (error: any) {
+      console.error('Error calling Azure OpenAI:', error);
+      
+      // 检查是否是身份验证错误
+      const errorMessage = error.message || 'Unknown error';
+      const isAuthError = errorMessage.includes('401') || 
+                         errorMessage.includes('authentication') || 
+                         errorMessage.includes('key') || 
+                         errorMessage.includes('credentials');
+
+      if (isAuthError) {
+        console.error('Authentication error - please check your Azure OpenAI credentials');
       }
-    );
+
+      // 打印详细的调试信息
+      console.error('Debug information:', {
+        error: errorMessage,
+        endpoint: endpoint?.replace(/\/+$/, ''),
+        deploymentName,
+        apiVersion,
+        hasApiKey: !!apiKey,
+        isAuthError
+      });
+
+      return NextResponse.json(
+        { 
+          error: isAuthError ? 'Authentication failed' : 'Failed to call Azure OpenAI',
+          details: errorMessage,
+          debug: {
+            endpoint: endpoint?.replace(/\/+$/, ''),
+            deploymentName,
+            apiVersion,
+            hasApiKey: !!apiKey,
+            isAuthError
+          }
+        },
+        { status: isAuthError ? 401 : 500 }
+      );
+    }
 
     if (!response.choices || response.choices.length === 0) {
       console.error('No completion choices returned from Azure OpenAI');

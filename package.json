@@ -79,6 +79,7 @@
   },
   "devDependencies": {
     "@types/marked": "^5.0.2",
-    "@types/uuid": "^9.0.8"
+    "@types/uuid": "^9.0.8",
+    "dotenv": "^16.4.7"
   }
 }
