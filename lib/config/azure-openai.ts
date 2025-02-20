@@ -1,4 +1,4 @@
-import { AzureKeyCredential, OpenAIClient } from '@azure/openai';
+import { AzureOpenAI } from 'openai';
 
 interface AzureOpenAIConfig {
   endpoint: string;
@@ -9,7 +9,7 @@ interface AzureOpenAIConfig {
 
 class AzureOpenAIService {
   private static instance: AzureOpenAIService;
-  private client: OpenAIClient | null = null;
+  private client: AzureOpenAI | null = null;
   private config: AzureOpenAIConfig;
 
   private constructor() {
@@ -18,7 +18,7 @@ class AzureOpenAIService {
       endpoint: process.env.AZURE_OPENAI_ENDPOINT || 'https://aictopus-test.openai.azure.com',
       apiKey: process.env.AZURE_OPENAI_API_KEY || '',
       deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'o3-mini',
-      apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview'
+      apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview'
     };
   }
 
@@ -33,17 +33,18 @@ class AzureOpenAIService {
     return { ...this.config };
   }
 
-  public getClient(): OpenAIClient {
+  public getClient(): AzureOpenAI {
     if (!this.client) {
       if (!this.config.apiKey) {
         throw new Error('Azure OpenAI API key is not configured');
       }
 
-      this.client = new OpenAIClient(
-        this.config.endpoint,
-        new AzureKeyCredential(this.config.apiKey),
-        { apiVersion: this.config.apiVersion }
-      );
+      this.client = new AzureOpenAI({
+        apiKey: this.config.apiKey,
+        endpoint: this.config.endpoint,
+        deployment: this.config.deploymentName,
+        apiVersion: this.config.apiVersion
+      });
     }
     return this.client;
   }
