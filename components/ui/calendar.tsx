@@ -54,9 +54,10 @@ function Calendar({
         ...classNames,
       }}
       components={{
+        CaptionLabel: (props) => <span {...props} className="block text-sm font-medium" />,
         Dropdown: (props) => <select {...props} className="hidden" />,
-        IconNext: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        IconPrev: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        CaptionNavNextButton: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        CaptionNavPrevButton: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
       }}
       {...props}
     />
