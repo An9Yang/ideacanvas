@@ -39,7 +39,6 @@ export async function POST(request: Request) {
         { role: 'system', content: FLOW_GENERATION_PROMPT },
         { role: 'user', content: body.prompt }
       ],
-      temperature: 0.7,
       max_completion_tokens: 2000
     });
 

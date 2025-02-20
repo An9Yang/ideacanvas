@@ -26,19 +26,18 @@ async function testAzureOpenAI() {
       messages: [
         { role: 'user', content: '你好，这是一个测试消息。请回复"测试成功"。' }
       ],
-      temperature: 0.7,
       max_completion_tokens: 50
     });
 
     console.log('\n测试结果：');
     console.log('状态：✅ 成功');
     console.log('响应：', response.choices[0].message?.content);
-  } catch (error) {
+  } catch (error: unknown) {
     console.log('\n测试结果：');
     console.log('状态：❌ 失败');
     
     // 检查是否是 API 错误
-    const errorMessage = error.message || '未知错误';
+    const errorMessage = error instanceof Error ? error.message : '未知错误';
     const isAuthError = errorMessage.includes('401') || 
                        errorMessage.includes('authentication') || 
                        errorMessage.includes('key') || 
