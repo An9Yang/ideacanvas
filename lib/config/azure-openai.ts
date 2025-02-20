@@ -1,4 +1,4 @@
-import { AzureKeyCredential, OpenAIClient } from '@azure/openai';
+import { AzureOpenAI, OpenAI } from 'openai';
 
 interface AzureOpenAIConfig {
   endpoint: string;
@@ -9,17 +9,25 @@ interface AzureOpenAIConfig {
 
 class AzureOpenAIService {
   private static instance: AzureOpenAIService;
-  private client: OpenAIClient | null = null;
+  private client: AzureOpenAI | null = null;
   private config: AzureOpenAIConfig;
 
   private constructor() {
-    // 从环境变量加载配置
+    // Load config from environment variables
     this.config = {
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT || 'https://aictopus-test.openai.azure.com',
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
       apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-      deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'o3-mini',
-      apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview'
+      deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+      apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview'
     };
+    
+    // Log configuration (without API key)
+    console.log('Azure OpenAI Configuration:', {
+      endpoint: this.config.endpoint,
+      deploymentName: this.config.deploymentName,
+      apiVersion: this.config.apiVersion,
+      hasApiKey: !!this.config.apiKey
+    });
   }
 
   public static getInstance(): AzureOpenAIService {
@@ -33,17 +41,18 @@ class AzureOpenAIService {
     return { ...this.config };
   }
 
-  public getClient(): OpenAIClient {
+  public getClient(): AzureOpenAI {
     if (!this.client) {
       if (!this.config.apiKey) {
         throw new Error('Azure OpenAI API key is not configured');
       }
 
-      this.client = new OpenAIClient(
-        this.config.endpoint,
-        new AzureKeyCredential(this.config.apiKey),
-        { apiVersion: this.config.apiVersion }
-      );
+      this.client = new AzureOpenAI({
+        apiKey: this.config.apiKey,
+        endpoint: this.config.endpoint,
+        deployment: this.config.deploymentName,
+        apiVersion: this.config.apiVersion
+      });
     }
     return this.client;
   }
@@ -51,20 +60,22 @@ class AzureOpenAIService {
   public validateConfig(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    if (!this.config.endpoint?.startsWith('https://')) {
-      errors.push('Endpoint must start with https://');
+    if (!this.config.endpoint) {
+      errors.push('Azure OpenAI endpoint is not configured');
+    } else if (!this.config.endpoint.startsWith('https://')) {
+      errors.push('Azure OpenAI endpoint must start with https://');
     }
 
     if (!this.config.apiKey) {
-      errors.push('API key is not configured');
+      errors.push('Azure OpenAI API key is not configured');
     }
 
     if (!this.config.deploymentName) {
-      errors.push('Deployment name is not configured');
+      errors.push('Azure OpenAI deployment name is not configured');
     }
 
     if (!this.config.apiVersion) {
-      errors.push('API version is not configured');
+      errors.push('Azure OpenAI API version is not configured');
     }
 
     return {
@@ -76,19 +87,19 @@ class AzureOpenAIService {
   public async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
       const client = this.getClient();
-      const response = await client.getChatCompletions(
-        this.config.deploymentName,
-        [{ role: 'user', content: '你好，这是一个测试消息。请回复"测试成功"。' }]
-      );
+      const response = await client.chat.completions.create({
+        model: this.config.deploymentName,
+        messages: [{ role: 'user', content: 'Hello, this is a test message. Please reply with "Test successful".' }]
+      });
 
       return {
         success: true,
-        message: response.choices[0].message?.content || '测试成功，但没有收到预期的响应'
+        message: response.choices[0].message?.content || 'Test successful but no expected response received'
       };
     } catch (error: any) {
       return {
         success: false,
-        message: error.message || '连接测试失败'
+        message: error.message || 'Unknown error occurred'
       };
     }
   }

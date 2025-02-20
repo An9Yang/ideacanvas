@@ -73,7 +73,7 @@ export const PromptNode = memo(({ id, data, isConnectable, selected }: PromptNod
       {results && results.length > 0 && (
         <div className="absolute left-[420px] top-0 flex gap-4">
           {results.map((result, index) => {
-            const file = uploadedFiles.find(f => f.id === result.fileId);
+            const file = uploadedFiles.find((f: { id: string }) => f.id === result.fileId);
             return (
               <div key={result.fileId} className="relative">
                 <Badge 

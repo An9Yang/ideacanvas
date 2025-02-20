@@ -33,22 +33,37 @@ export async function POST(request: Request) {
     const config = azureOpenAI.getConfig();
     
     console.log('Generating flow for prompt:', body.prompt);
-    const response = await client.getChatCompletions(
-      config.deploymentName,
-      [
+    console.log('Using deployment:', config.deploymentName);
+    
+    const response = await client.chat.completions.create({
+      model: config.deploymentName,
+      messages: [
         { role: 'system', content: FLOW_GENERATION_PROMPT },
         { role: 'user', content: body.prompt }
-      ]
-    );
+      ],
+      max_completion_tokens: 100000  // 增加总 token 限制
+    });
 
+    console.log('Raw AI response:', response);
+    
     if (!response.choices?.[0]?.message?.content) {
+      console.error('Invalid response structure:', response);
       throw new Error('Invalid or empty AI response');
     }
 
     // 处理 AI 响应
-    const cleanedContent = sanitizeJSON(response.choices[0].message.content.trim());
+    console.log('Raw AI response content:', response.choices[0].message.content);
+    
+    const trimmedContent = response.choices[0].message.content.trim();
+    console.log('Trimmed content:', trimmedContent);
+    
+    const cleanedContent = sanitizeJSON(trimmedContent);
+    console.log('Cleaned content:', cleanedContent);
+    
     const { isValid, error } = validateJSON(cleanedContent);
     if (!isValid) {
+      console.error('JSON validation error:', error);
+      console.error('Content that failed validation:', cleanedContent);
       throw new Error(`JSON validation failed: ${error}`);
     }
 
