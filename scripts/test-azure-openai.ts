@@ -33,10 +33,19 @@ async function testAzureOpenAI() {
     console.log('\n测试结果：');
     console.log('状态：✅ 成功');
     console.log('响应：', response.choices[0].message?.content);
-  } catch (error) {
+  } catch (error: any) {
     console.log('\n测试结果：');
     console.log('状态：❌ 失败');
-    console.log('错误信息：', error.message);
+    
+    // 检查是否是 API 错误
+    const errorMessage = error.message || '未知错误';
+    const isAuthError = errorMessage.includes('401') || 
+                       errorMessage.includes('authentication') || 
+                       errorMessage.includes('key') || 
+                       errorMessage.includes('credentials');
+
+    console.log('错误类型：', isAuthError ? '认证错误' : '其他错误');
+    console.log('错误信息：', errorMessage);
     console.log('\n详细错误：', error);
   }
 }

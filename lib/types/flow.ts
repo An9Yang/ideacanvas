@@ -49,6 +49,7 @@ export interface GeneratedNode {
 export interface GeneratedEdge {
   source: string;
   target: string;
+  description: string;
 }
 
 export interface GeneratedFlow {

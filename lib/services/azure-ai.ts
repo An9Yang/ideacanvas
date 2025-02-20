@@ -1,26 +1,5 @@
-import { NodeType } from '@/lib/types/flow';
-
-interface GeneratedNode {
-  type: NodeType;
-  title: string;
-  content: string;
-  position: { x: number; y: number };
-}
-
-interface GeneratedEdge {
-  source: string;
-  target: string;
-}
-
-interface GeneratedFlow {
-  nodes: GeneratedNode[];
-  edges: GeneratedEdge[];
-}
-
-interface ErrorResponse {
-  error: string;
-  details?: string;
-}
+import { GeneratedFlow } from '@/lib/types/flow';
+import { handleAPIError } from '@/lib/utils/error-handler';
 
 export async function generateFlowFromPrompt(prompt: string): Promise<GeneratedFlow> {
   try {
