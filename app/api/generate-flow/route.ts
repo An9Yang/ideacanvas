@@ -52,9 +52,18 @@ export async function POST(request: Request) {
     }
 
     // 处理 AI 响应
-    const cleanedContent = sanitizeJSON(response.choices[0].message.content.trim());
+    console.log('Raw AI response content:', response.choices[0].message.content);
+    
+    const trimmedContent = response.choices[0].message.content.trim();
+    console.log('Trimmed content:', trimmedContent);
+    
+    const cleanedContent = sanitizeJSON(trimmedContent);
+    console.log('Cleaned content:', cleanedContent);
+    
     const { isValid, error } = validateJSON(cleanedContent);
     if (!isValid) {
+      console.error('JSON validation error:', error);
+      console.error('Content that failed validation:', cleanedContent);
       throw new Error(`JSON validation failed: ${error}`);
     }
 

@@ -9,7 +9,7 @@ interface AzureOpenAIConfig {
 
 class AzureOpenAIService {
   private static instance: AzureOpenAIService;
-  private client: AzureOpenAI | null = null;
+  private client: OpenAIClient | null = null;
   private config: AzureOpenAIConfig;
 
   private constructor() {
