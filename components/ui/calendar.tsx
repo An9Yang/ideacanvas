@@ -54,7 +54,7 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Dropdown: () => null,
+        Dropdown: (props) => <select {...props} className="hidden" />,
         IconNext: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
         IconPrev: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
       }}
