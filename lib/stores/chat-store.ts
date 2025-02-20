@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Message } from '@/lib/types/common';
-import { createAssistant, createThread, uploadPDFAndAttachToThread, sendMessage, getMessages } from '@/lib/services/chat-service';
+import { createAssistant, createThread, sendMessage, getMessages } from '@/lib/services/chat-service';
 
 interface ChatState {
   messages: Message[];
@@ -8,9 +8,7 @@ interface ChatState {
   error: string | null;
   assistantId: string | null;
   threadId: string | null;
-  uploadedFile: File | null;
   initializeChat: () => Promise<void>;
-  uploadPDF: (file: File) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
 }
 
@@ -20,7 +18,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
   error: null,
   assistantId: null,
   threadId: null,
-  uploadedFile: null,
 
   initializeChat: async () => {
     try {
@@ -38,30 +35,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  uploadPDF: async (file: File) => {
-    const { threadId } = get();
-    if (!threadId) {
-      throw new Error('Chat not initialized');
-    }
-
-    try {
-      set({ isLoading: true, error: null });
-      await uploadPDFAndAttachToThread(file, threadId);
-      set({ uploadedFile: file });
-      
-      // Fetch initial messages after upload
-      const messages = await getMessages(threadId);
-      set({ messages: messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-      })) });
-    } catch (error) {
-      set({ error: error instanceof Error ? error.message : 'Failed to upload PDF' });
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
   sendMessage: async (content: string) => {
     const { threadId, assistantId } = get();
     if (!threadId || !assistantId) {
@@ -70,18 +43,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     try {
       set({ isLoading: true, error: null });
-      const response = await sendMessage(threadId, assistantId, content);
+      await sendMessage(threadId, assistantId, content);
+      const apiMessages = await getMessages(threadId);
       
-      // Fetch updated messages
-      const messages = await getMessages(threadId);
-      set({ messages: messages.map(msg => ({
+      // 转换消息格式
+      const messages: Message[] = apiMessages.map(msg => ({
         role: msg.role as 'user' | 'assistant',
-        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
-      })) });
+        content: Array.isArray(msg.content) 
+          ? msg.content
+              .filter(c => 'text' in c && c.text?.value)
+              .map(c => (c as { text: { value: string } }).text.value)
+              .join('\n')
+          : typeof msg.content === 'string' 
+            ? msg.content 
+            : JSON.stringify(msg.content)
+      }));
+      
+      set({ messages });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to send message' });
     } finally {
       set({ isLoading: false });
     }
-  },
+  }
 }));

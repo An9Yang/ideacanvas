@@ -4,17 +4,14 @@ import { useEffect } from 'react';
 import { useChatStore } from '@/lib/stores/chat-store';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
-import { PDFUpload } from '@/components/pdf/pdf-upload';
 import { Card } from '@/components/ui/card';
 
 export function ChatContainer() {
   const { 
     messages, 
     isLoading, 
-    error, 
-    uploadedFile,
-    initializeChat, 
-    uploadPDF, 
+    error,
+    initializeChat,
     sendMessage 
   } = useChatStore();
 
@@ -33,14 +30,8 @@ export function ChatContainer() {
   return (
     <div className="container mx-auto max-w-4xl p-4 space-y-4">
       <div className="flex flex-col h-[800px] space-y-4">
-        {!uploadedFile ? (
-          <PDFUpload />
-        ) : (
-          <>
-            <MessageList messages={messages} />
-            <ChatInput onSend={sendMessage} isLoading={isLoading} />
-          </>
-        )}
+        <MessageList messages={messages} />
+        <ChatInput onSend={sendMessage} isLoading={isLoading} />
       </div>
     </div>
   );
