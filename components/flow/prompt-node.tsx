@@ -7,13 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { formatText } from '@/lib/utils/text-formatter';
-import { usePDFStore } from '@/lib/stores/pdf-store';
 
 interface PromptNodeProps {
   id: string;
   data: {
     prompt: string;
-    results?: Array<{ fileId: string; result: string }>;
+    results?: Array<{ result: string }>;
     isProcessing?: boolean;
     error?: string;
     updateNodePrompt?: (id: string, prompt: string) => void;
@@ -24,7 +23,6 @@ interface PromptNodeProps {
 
 export const PromptNode = memo(({ id, data, isConnectable, selected }: PromptNodeProps) => {
   const { prompt, results, isProcessing, error, updateNodePrompt } = data;
-  const { uploadedFiles } = usePDFStore();
   
   return (
     <div className="relative">
@@ -72,27 +70,24 @@ export const PromptNode = memo(({ id, data, isConnectable, selected }: PromptNod
       {/* Results Container - Positioned to the right */}
       {results && results.length > 0 && (
         <div className="absolute left-[420px] top-0 flex gap-4">
-          {results.map((result, index) => {
-            const file = uploadedFiles.find((f: { id: string }) => f.id === result.fileId);
-            return (
-              <div key={result.fileId} className="relative">
-                <Badge 
-                  variant="secondary" 
-                  className="absolute -top-8 left-0 z-10 max-w-[400px] truncate"
-                >
-                  {index + 1}. {file?.title || 'Unknown Document'}
-                </Badge>
-                <Card className="p-4 bg-background/95 backdrop-blur shadow-lg w-[400px]">
-                  <div 
-                    className="prose prose-sm dark:prose-invert"
-                    dangerouslySetInnerHTML={{ 
-                      __html: formatText(result.result)
-                    }}
-                  />
-                </Card>
-              </div>
-            );
-          })}
+          {results.map((result, index) => (
+            <div key={index} className="relative">
+              <Badge 
+                variant="secondary" 
+                className="absolute -top-8 left-0 z-10 max-w-[400px] truncate"
+              >
+                Result {index + 1}
+              </Badge>
+              <Card className="p-4 bg-background/95 backdrop-blur shadow-lg w-[400px]">
+                <div 
+                  className="prose prose-sm dark:prose-invert"
+                  dangerouslySetInnerHTML={{ 
+                    __html: formatText(result.result)
+                  }}
+                />
+              </Card>
+            </div>
+          ))}
         </div>
       )}
     </div>
