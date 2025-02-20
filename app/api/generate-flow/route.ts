@@ -41,7 +41,10 @@ export async function POST(request: Request) {
         { role: 'system', content: FLOW_GENERATION_PROMPT },
         { role: 'user', content: body.prompt }
       ],
-      max_completion_tokens: 2000
+      max_tokens: 4000,  // 增加总 token 限制
+      temperature: 0.7,  // 添加温度参数以控制输出的创造性
+      presence_penalty: 0.1,  // 轻微降低重复内容的可能性
+      frequency_penalty: 0.1  // 轻微降低频繁词汇的使用
     });
 
     console.log('Raw AI response:', response);
