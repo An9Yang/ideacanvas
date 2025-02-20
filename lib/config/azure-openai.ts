@@ -1,4 +1,4 @@
-import { AzureOpenAI } from 'openai';
+import { AzureOpenAI, OpenAI } from 'openai';
 
 interface AzureOpenAIConfig {
   endpoint: string;
@@ -9,7 +9,7 @@ interface AzureOpenAIConfig {
 
 class AzureOpenAIService {
   private static instance: AzureOpenAIService;
-  private client: OpenAIClient | null = null;
+  private client: AzureOpenAI | null = null;
   private config: AzureOpenAIConfig;
 
   private constructor() {
