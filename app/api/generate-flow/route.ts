@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         { role: 'user', content: body.prompt }
       ],
       temperature: 0.7,
-      max_tokens: 2000
+      max_completion_tokens: 2000
     });
 
     if (!response.choices?.[0]?.message?.content) {

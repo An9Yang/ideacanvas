@@ -27,7 +27,7 @@ async function testAzureOpenAI() {
         { role: 'user', content: '你好，这是一个测试消息。请回复"测试成功"。' }
       ],
       temperature: 0.7,
-      max_tokens: 50
+      max_completion_tokens: 50
     });
 
     console.log('\n测试结果：');
