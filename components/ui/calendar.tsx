@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { DayPicker } from 'react-day-picker';
+import { DayPicker, CaptionProps } from 'react-day-picker';
 
 import { cn } from '@/lib/utils/common';
 import { buttonVariants } from '@/components/ui/button';
@@ -54,17 +54,13 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Caption: (props) => (
+        CaptionLabel: (props: CaptionProps) => (
           <div className="flex justify-center pt-1 relative items-center">
-            <button
-              type="button"
-              onClick={() => props.goToMonth(props.displayMonth)}
-              className="text-sm font-medium"
-            >
+            <span className="text-sm font-medium">
               {props.displayMonth.toLocaleString(undefined, { month: 'long' })}
               {' '}
               {props.displayMonth.getFullYear()}
-            </button>
+            </span>
           </div>
         ),
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
