@@ -20,6 +20,8 @@ export interface Node {
   data: {
     title: string;
     content: string;
+    prompt?: string;
+    result?: string;
     results?: NodeResult[];
     isProcessing?: boolean;
     error?: string;
@@ -49,6 +51,7 @@ export interface GeneratedNode {
 export interface GeneratedEdge {
   source: string;
   target: string;
+  description: string;
 }
 
 export interface GeneratedFlow {
@@ -65,6 +68,8 @@ export interface FlowState {
   updateNodes: (nodes: Node[]) => void;
   updateEdges: (edges: Edge[]) => void;
   updateNodeContent: (id: string, content: string) => void;
+  updateNodePrompt: (id: string, prompt: string) => void;
+  updateNodeResult: (id: string, result: string) => void;
   updateNodeResults: (id: string, results: NodeResult[]) => void;
   setNodeProcessing: (id: string, isProcessing: boolean) => void;
   setNodeError: (id: string, error: string) => void;

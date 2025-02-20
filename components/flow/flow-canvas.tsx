@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, Suspense, useEffect, useState } from 'react';
+import React, { useCallback, Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Connection, Edge, NodeChange, applyNodeChanges } from 'reactflow';
+import { Connection, Edge, NodeChange, applyNodeChanges, Node as ReactFlowNode } from 'reactflow';
 import { Node } from '@/lib/types/flow';
 import 'reactflow/dist/style.css';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { NODE_TYPES, EDGE_OPTIONS, FLOW_PROPS } from './flow-config';
+import { PromptNode } from './prompt-node';
+import { FlowToolbar } from './flow-toolbar';
+import { generateCompletion } from '@/lib/services/openai-service';
 
 // 动态导入所有 ReactFlow 组件
 const ReactFlowComponent = dynamic(
@@ -67,7 +70,7 @@ export function FlowCanvas() {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       requestAnimationFrame(() => {
-        const updatedNodes = applyNodeChanges(changes, nodes as any);
+        const updatedNodes = applyNodeChanges(changes, nodes as ReactFlowNode[]);
         updateNodes(updatedNodes as Node[]);
       });
     },
