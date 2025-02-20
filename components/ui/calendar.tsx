@@ -54,10 +54,21 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        CaptionLabel: (props) => <span {...props} className="block text-sm font-medium" />,
-        Dropdown: (props) => <select {...props} className="hidden" />,
-        CaptionNavNextButton: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
-        CaptionNavPrevButton: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        Caption: (props) => (
+          <div className="flex justify-center pt-1 relative items-center">
+            <button
+              type="button"
+              onClick={() => props.goToMonth(props.displayMonth)}
+              className="text-sm font-medium"
+            >
+              {props.displayMonth.toLocaleString(undefined, { month: 'long' })}
+              {' '}
+              {props.displayMonth.getFullYear()}
+            </button>
+          </div>
+        ),
+        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />
