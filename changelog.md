@@ -2,6 +2,15 @@
 
 ## 2025-02-20
 
+### 修复 API 调用错误（2025-02-20 11:21）
+
+1. 修复 generate-flow API 路由
+   - 更新 chat completions API 调用方式
+   - 添加 temperature 和 max_tokens 参数
+
+
+## 2025-02-20
+
 ### 升级 Azure OpenAI SDK（2025-02-20 11:15）
 
 1. 更新依赖

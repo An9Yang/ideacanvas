@@ -33,13 +33,15 @@ export async function POST(request: Request) {
     const config = azureOpenAI.getConfig();
     
     console.log('Generating flow for prompt:', body.prompt);
-    const response = await client.getChatCompletions(
-      config.deploymentName,
-      [
+    const response = await client.chat.completions.create({
+      model: config.deploymentName,
+      messages: [
         { role: 'system', content: FLOW_GENERATION_PROMPT },
         { role: 'user', content: body.prompt }
-      ]
-    );
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
 
     if (!response.choices?.[0]?.message?.content) {
       throw new Error('Invalid or empty AI response');
