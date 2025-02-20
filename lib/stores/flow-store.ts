@@ -102,6 +102,22 @@ export const useFlowStore = create<FlowState>()(
         set({ nodes: updatedNodes });
       },
 
+      updateNodePrompt: (id, prompt) => {
+        const { nodes } = get();
+        const updatedNodes = nodes.map((node) =>
+          node.id === id ? { ...node, data: { ...node.data, prompt } } : node
+        );
+        set({ nodes: updatedNodes });
+      },
+
+      updateNodeResult: (id, result) => {
+        const { nodes } = get();
+        const updatedNodes = nodes.map((node) =>
+          node.id === id ? { ...node, data: { ...node.data, result } } : node
+        );
+        set({ nodes: updatedNodes });
+      },
+
 
       generateFlow: async (prompt: string) => {
         try {

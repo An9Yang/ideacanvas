@@ -3,7 +3,7 @@ import { marked } from 'marked';
 const renderer = new marked.Renderer();
 
 renderer.heading = (text, level) => {
-  const sizes = {
+  const sizes: Record<number, string> = {
     1: 'text-2xl',
     2: 'text-xl',
     3: 'text-lg',
@@ -41,7 +41,7 @@ export const cleanText = (text: string): string => {
     .trim();
 };
 
-export const formatText = (text: string): string => {
+export const formatText = async (text: string): Promise<string> => {
   marked.setOptions({
     renderer,
     breaks: true,

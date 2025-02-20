@@ -53,7 +53,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const messages = await getMessages(threadId);
       set({ messages: messages.map(msg => ({
         role: msg.role as 'user' | 'assistant',
-        content: Array.isArray(msg.content) ? msg.content[0].text.value : msg.content
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
       })) });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to upload PDF' });
@@ -76,7 +76,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const messages = await getMessages(threadId);
       set({ messages: messages.map(msg => ({
         role: msg.role as 'user' | 'assistant',
-        content: Array.isArray(msg.content) ? msg.content[0].text.value : msg.content
+        content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
       })) });
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to send message' });

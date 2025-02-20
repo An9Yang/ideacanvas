@@ -14,7 +14,7 @@ export function ResultsPanel() {
   const { uploadedFiles } = usePDFStore();
   const [selectedNode, setSelectedNode] = useState(0);
   
-  const nodesWithResults = nodes.filter(node => node.data.results?.length > 0);
+  const nodesWithResults = nodes.filter(node => node.data.results && node.data.results.length > 0);
   
   if (nodesWithResults.length === 0) {
     return (
@@ -53,7 +53,7 @@ export function ResultsPanel() {
       <ScrollArea className="flex-1">
         <div className="space-y-4">
           {uploadedFiles.map((file) => {
-            const result = currentNode.data.results?.find(r => r.fileId === file.id);
+            const result = currentNode.data.results?.find((r: { fileId: string }) => r.fileId === file.id);
             if (!result) return null;
 
             return (
