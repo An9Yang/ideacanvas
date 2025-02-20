@@ -33,6 +33,8 @@ export async function POST(request: Request) {
     const config = azureOpenAI.getConfig();
     
     console.log('Generating flow for prompt:', body.prompt);
+    console.log('Using deployment:', config.deploymentName);
+    
     const response = await client.chat.completions.create({
       model: config.deploymentName,
       messages: [
@@ -42,7 +44,10 @@ export async function POST(request: Request) {
       max_completion_tokens: 2000
     });
 
+    console.log('Raw AI response:', response);
+    
     if (!response.choices?.[0]?.message?.content) {
+      console.error('Invalid response structure:', response);
       throw new Error('Invalid or empty AI response');
     }
 

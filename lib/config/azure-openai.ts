@@ -15,11 +15,19 @@ class AzureOpenAIService {
   private constructor() {
     // Load config from environment variables
     this.config = {
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT || 'https://aictopus-test.openai.azure.com',
+      endpoint: process.env.AZURE_OPENAI_ENDPOINT || '',
       apiKey: process.env.AZURE_OPENAI_API_KEY || '',
-      deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'o3-mini',
+      deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
       apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview'
     };
+    
+    // Log configuration (without API key)
+    console.log('Azure OpenAI Configuration:', {
+      endpoint: this.config.endpoint,
+      deploymentName: this.config.deploymentName,
+      apiVersion: this.config.apiVersion,
+      hasApiKey: !!this.config.apiKey
+    });
   }
 
   public static getInstance(): AzureOpenAIService {
