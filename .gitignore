@@ -67,3 +67,4 @@ coverage/
 .vscode
 *.sublime-workspace
 *.sublime-project
+.env
