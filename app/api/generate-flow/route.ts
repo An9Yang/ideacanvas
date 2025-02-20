@@ -41,7 +41,7 @@ export async function POST(request: Request) {
         { role: 'system', content: FLOW_GENERATION_PROMPT },
         { role: 'user', content: body.prompt }
       ],
-      max_tokens: 100000  // 增加总 token 限制
+      max_completion_tokens: 100000  // 增加总 token 限制
     });
 
     console.log('Raw AI response:', response);
