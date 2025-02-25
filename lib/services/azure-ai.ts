@@ -1,58 +1,58 @@
+// azure-ai.ts
 import { GeneratedFlow } from '@/lib/types/flow';
 import { handleAPIError } from '@/lib/utils/error-handler';
 
 export async function generateFlowFromPrompt(prompt: string): Promise<GeneratedFlow> {
   try {
-    // 打印请求详情
-    console.log('Sending request to generate flow with prompt:', prompt);
+    console.log('发送生成流程请求，prompt:', prompt);
 
+    // 发送 POST 请求到内部 API 接口
     const response = await fetch('/api/generate-flow', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ prompt }),
-      cache: 'no-store',
+      cache: 'no-store'
     });
 
-    // 打印响应状态
-    console.log('Response status:', response.status);
-    console.log('Response status text:', response.statusText);
+    console.log('响应状态码:', response.status);
+    console.log('响应状态文本:', response.statusText);
 
     const data = await response.json();
-    console.log('Response data:', data);
+    console.log('响应数据:', data);
 
     if (!response.ok) {
       const errorMessage = data.details 
         ? `${data.error}: ${data.details}`
-        : data.error || `Failed to generate flow: ${response.status} ${response.statusText}`;
-      console.error('Error in generate flow:', errorMessage);
+        : data.error || `生成流程失败: ${response.status} ${response.statusText}`;
+      console.error('生成流程出错:', errorMessage);
       throw new Error(errorMessage);
     }
 
-    // 验证返回的数据结构
+    // 验证返回的数据结构是否符合预期
     if (!data.nodes || !Array.isArray(data.nodes) || !data.edges || !Array.isArray(data.edges)) {
-      throw new Error('Invalid response format: missing nodes or edges');
+      throw new Error('响应格式错误: 缺少 nodes 或 edges');
     }
 
-    // 验证节点数据
+    // 验证每个节点的数据
     for (const node of data.nodes) {
-      if (!node.type || !node.title || !node.content || !node.position || 
+      if (!node.type || !node.title || !node.content || !node.position ||
           typeof node.position.x !== 'number' || typeof node.position.y !== 'number') {
-        throw new Error('Invalid response format: invalid node data');
+        throw new Error('响应格式错误: 节点数据无效');
       }
     }
 
-    // 验证边数据
+    // 验证每条边的数据
     for (const edge of data.edges) {
       if (!edge.source || !edge.target) {
-        throw new Error('Invalid response format: invalid edge data');
+        throw new Error('响应格式错误: 边数据无效');
       }
     }
 
     return data;
   } catch (error: any) {
-    console.error('Error in generateFlowFromPrompt:', error);
-    throw new Error(error.message || 'Failed to generate flow');
+    console.error('generateFlowFromPrompt 错误:', error);
+    throw new Error(error.message || '生成流程失败');
   }
 }
