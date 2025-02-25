@@ -28,7 +28,7 @@ const cleanNodeData = (nodes: Node[]) =>
     },
     data: {
       title: data.title,
-      content: data.content?.slice(0, 1000) // 限制内容长度
+      content: data.content?.slice(0, 4000) // 限制内容长度
     },
     draggable: true
   }));
