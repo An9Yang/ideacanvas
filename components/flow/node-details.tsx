@@ -132,7 +132,7 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
 
   return (
     <div
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[1000]"
       onClick={(e) => {
         // 点击遮罩层时关闭
         if (e.target === e.currentTarget) {
@@ -142,7 +142,14 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
     >
       <Card 
         ref={containerRef}
-        className="absolute right-0 top-0 bottom-0 w-[600px] shadow-xl border-l-2 bg-background"
+        className="absolute right-0 top-0 bottom-0 shadow-xl border-l-2 bg-background"
+        style={{ 
+          zIndex: 1001,
+          width: 'auto',
+          minWidth: '400px',
+          maxWidth: '800px',
+          maxHeight: '90vh'
+        }}
       >
         <div className="sticky top-0 z-10 bg-background p-6 border-b">
           <div className="flex items-center justify-between">
@@ -158,9 +165,9 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
           </div>
         </div>
         
-        <div className="p-6 pt-0">
+        <div className="p-6 pt-0 bg-background">
           <ScrollArea className="h-[calc(100vh-8rem)]">
-            <div className="prose prose-sm dark:prose-invert max-w-none pr-4">
+            <div className="prose prose-sm dark:prose-invert max-w-none pr-4 bg-background">
               {formattedContent.map((item, index) => {
                 switch (item.type) {
                   case 'h1':
@@ -183,7 +190,7 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
                     );
                   case 'list-item':
                     return (
-                      <div key={index} className="flex ml-4 mb-2">
+                      <div key={index} className="flex ml-4 mb-2 bg-background">
                         <span className="mr-2">{item.content.startsWith('-') ? '•' : '•'}</span>
                         <p>{item.content.substring(1).trim()}</p>
                       </div>
