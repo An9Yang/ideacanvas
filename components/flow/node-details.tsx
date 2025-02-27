@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, Copy, Check } from 'lucide-react';
 import { NodeType } from '@/lib/types/flow';
+import { useToast } from '@/hooks/use-toast';
 
 interface NodeDetailsProps {
   title: string;
@@ -44,6 +45,29 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
   const typeText = getTypeText(type);
   const typeStyle = getTypeStyle(type);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      toast({
+        title: "已复制到剪贴板",
+        description: "内容已成功复制到剪贴板",
+        duration: 2000,
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('复制失败:', err);
+      toast({
+        title: "复制失败",
+        description: "无法复制内容到剪贴板",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
 
   const formatContent = useCallback((content: string) => {
     // 处理内容，将其分割成段落并标记格式
@@ -142,13 +166,13 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
     >
       <Card 
         ref={containerRef}
-        className="absolute right-0 top-0 bottom-0 shadow-xl border-l-2 bg-background"
+        className="absolute right-0 top-[10vh] shadow-xl border-l-2 bg-background overflow-hidden"
         style={{ 
           zIndex: 1001,
           width: 'auto',
           minWidth: '400px',
           maxWidth: '800px',
-          maxHeight: '90vh'
+          maxHeight: '80vh'
         }}
       >
         <div className="sticky top-0 z-10 bg-background p-6 border-b">
@@ -159,14 +183,34 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
               </span>
               <h2 className="text-2xl font-bold mt-2">{title}</h2>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopy}
+                className="flex items-center gap-1"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>已复制</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    <span>复制内容</span>
+                  </>
+                )}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
         
         <div className="p-6 pt-0 bg-background">
-          <ScrollArea className="h-[calc(100vh-8rem)]">
+          <ScrollArea className="max-h-[calc(80vh-7rem)]">
             <div className="prose prose-sm dark:prose-invert max-w-none pr-4 bg-background">
               {formattedContent.map((item, index) => {
                 switch (item.type) {

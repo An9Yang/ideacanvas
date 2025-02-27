@@ -14,7 +14,7 @@ export default function Home() {
       {/* 悬浮控制面板 */}
       <div className="absolute top-4 left-4 w-[480px] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 rounded-lg shadow-lg border border-border">
         <div className="p-4 border-b border-border">
-          <h1 className="text-2xl font-bold">流程图生成器</h1>
+          <h1 className="text-2xl font-bold">App Blueprint</h1>
         </div>
         <div className="p-4">
           <PromptInput />
