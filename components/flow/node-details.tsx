@@ -37,25 +37,76 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
   const containerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const isMountedRef = useRef(true); // 跟踪组件是否挂载的引用
+  const timerRef = useRef<NodeJS.Timeout | null>(null); // 存储定时器引用
 
-  const handleCopy = async () => {
+  // 组件挂载和卸载时的处理
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // 组件卸载时的清理
+    return () => {
+      isMountedRef.current = false;
+      // 清除所有可能的定时器
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, []);
+
+  // 使用同步方法复制内容，避免不必要的异步操作
+  const handleCopy = () => {
     try {
-      await navigator.clipboard.writeText(content);
-      setCopied(true);
-      toast({
-        title: t('copySuccess'),
-        description: t('copySuccessDescription'),
-        duration: 2000,
-      });
-      setTimeout(() => setCopied(false), 2000);
+      // 同步方法复制文本，减少异步操作的问题
+      const textArea = document.createElement('textarea');
+      textArea.value = content;
+      // 防止滚动到底部
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful && isMountedRef.current) {
+        setCopied(true);
+        
+        // 使用toast前检查组件是否还在挂载状态
+        if (isMountedRef.current) {
+          toast({
+            title: t('copySuccess'),
+            description: t('copySuccessDescription'),
+            duration: 2000,
+          });
+        }
+        
+        // 清除之前的定时器
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
+        
+        // 存储新的定时器引用
+        timerRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            setCopied(false);
+          }
+        }, 2000);
+      }
     } catch (err) {
       console.error('复制失败:', err);
-      toast({
-        title: t('copyFailed'),
-        description: t('copyFailedDescription'),
-        variant: "destructive",
-        duration: 2000,
-      });
+      // 确保只在组件挂载时显示错误消息
+      if (isMountedRef.current) {
+        toast({
+          title: t('copyFailed'),
+          description: t('copyFailedDescription'),
+          variant: "destructive",
+          duration: 2000,
+        });
+      }
     }
   };
 
