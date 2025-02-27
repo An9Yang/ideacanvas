@@ -8,6 +8,8 @@ import { Loader2, ChevronRight } from 'lucide-react';
 import { NodeType } from '@/lib/types/flow';
 import { NodeDetails } from './node-details';
 import { NodeProps } from 'reactflow';
+import { useTranslation } from '@/hooks/useTranslation';
+import { translateNodeTitle } from '@/lib/utils/translate-node';
 
 interface FlowNodeData {
   title: string;
@@ -43,7 +45,7 @@ const getContentSummary = (content: string) => {
     .filter(line => line.trim() && !line.startsWith('1.'))
     .map(line => line.trim())
     .join(' ');
-  return description || '点击查看详情';
+  return description || '';
 };
 
 const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNodeProps) => {
@@ -51,6 +53,10 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
   const nodeStyle = getNodeStyle(type);
   const { title, content, results, isProcessing, error } = data;
   const summary = getContentSummary(content);
+  const { t, language } = useTranslation();
+  
+  // 翻译节点标题
+  const translatedTitle = translateNodeTitle(title, language);
   
   return (
     <>
@@ -81,7 +87,7 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
           />
           
           <div className="space-y-2">
-            <h3 className="font-semibold text-lg">{title}</h3>
+            <h3 className="font-semibold text-lg">{translatedTitle}</h3>
             <p className="text-sm text-muted-foreground line-clamp-3">{summary}</p>
             <Button
               variant="ghost"
@@ -89,7 +95,7 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
               className="w-full mt-2"
               onClick={() => setShowDetails(true)}
             >
-              查看详情
+              {t('viewDetails')}
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
             
@@ -122,7 +128,7 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
 
       {showDetails && (
         <NodeDetails
-          title={title}
+          title={translatedTitle}
           content={content}
           type={type}
           onClose={() => setShowDetails(false)}

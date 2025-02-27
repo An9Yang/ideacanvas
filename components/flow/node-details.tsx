@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { X, Copy, Check } from 'lucide-react';
 import { NodeType } from '@/lib/types/flow';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/useTranslation';
+import { getNodeTypeText } from '@/lib/utils/translate-node';
 
 interface NodeDetailsProps {
   title: string;
@@ -14,19 +16,6 @@ interface NodeDetailsProps {
   type: NodeType;
   onClose: () => void;
 }
-
-const getTypeText = (type: NodeType) => {
-  switch (type) {
-    case 'external':
-      return '外部服务';
-    case 'context':
-      return '上下文信息';
-    case 'guide':
-      return '开发指南';
-    default:
-      return '产品功能';
-  }
-};
 
 const getTypeStyle = (type: NodeType) => {
   switch (type) {
@@ -42,7 +31,8 @@ const getTypeStyle = (type: NodeType) => {
 };
 
 export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps) => {
-  const typeText = getTypeText(type);
+  const { t, language } = useTranslation();
+  const typeText = getNodeTypeText(type, language);
   const typeStyle = getTypeStyle(type);
   const containerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
@@ -53,16 +43,16 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
       await navigator.clipboard.writeText(content);
       setCopied(true);
       toast({
-        title: "已复制到剪贴板",
-        description: "内容已成功复制到剪贴板",
+        title: t('copySuccess'),
+        description: t('copySuccessDescription'),
         duration: 2000,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('复制失败:', err);
       toast({
-        title: "复制失败",
-        description: "无法复制内容到剪贴板",
+        title: t('copyFailed'),
+        description: t('copyFailedDescription'),
         variant: "destructive",
         duration: 2000,
       });
@@ -175,41 +165,31 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
           maxHeight: '80vh'
         }}
       >
-        <div className="sticky top-0 z-10 bg-background p-6 border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className={`px-2 py-1 rounded text-sm font-medium ${typeStyle}`}>
-                {typeText}
-              </span>
-              <h2 className="text-2xl font-bold mt-2">{title}</h2>
-            </div>
-            <div className="flex gap-2">
+        <div className="sticky top-0 z-10 bg-background p-4 border-b">
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`px-2 py-1 rounded text-sm font-medium ${typeStyle}`}>
+              {typeText}
+            </span>
+            <div className="ml-auto flex items-center gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleCopy}
-                className="flex items-center gap-1"
+                className="flex items-center gap-1 h-8"
               >
-                {copied ? (
-                  <>
-                    <Check className="h-4 w-4" />
-                    <span>已复制</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-4 w-4" />
-                    <span>复制内容</span>
-                  </>
-                )}
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                <span>{copied ? t('copied') : t('copyContent')}</span>
               </Button>
-              <Button variant="ghost" size="icon" onClick={onClose}>
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
                 <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
               </Button>
             </div>
           </div>
+          <h2 className="text-2xl font-bold">{title}</h2>
         </div>
         
-        <div className="p-6 pt-0 bg-background">
+        <div className="p-4 pt-0 bg-background">
           <ScrollArea className="max-h-[calc(80vh-7rem)]">
             <div className="prose prose-sm dark:prose-invert max-w-none pr-4 bg-background">
               {formattedContent.map((item, index) => {
