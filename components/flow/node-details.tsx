@@ -35,6 +35,7 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
   const typeText = getNodeTypeText(type, language);
   const typeStyle = getTypeStyle(type);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   const isMountedRef = useRef(true); // 跟踪组件是否挂载的引用
@@ -175,21 +176,42 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
     return formattedContent;
   }, []);
 
-  // 阻止滚轮事件传播到画布
+  // 使用捕获阶段处理滚轮事件，确保能在事件冒泡前捕获并阻止
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      // 如果在滚动区域内，阻止事件传播
-      if (e.target instanceof Node && container.contains(e.target)) {
+    // 全局捕获滚轮事件
+    const handleGlobalWheel = (e: WheelEvent) => {
+      // 如果点击在容器内部，阻止事件继续传播
+      if (containerRef.current?.contains(e.target as Node)) {
         e.stopPropagation();
       }
     };
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
+    // 在捕获阶段注册事件
+    window.addEventListener('wheel', handleGlobalWheel, { capture: true });
+    
     return () => {
-      container.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('wheel', handleGlobalWheel, { capture: true });
+    };
+  }, []);
+
+  // 内容区滚动处理
+  useEffect(() => {
+    const contentContainer = scrollContentRef.current;
+    if (!contentContainer) return;
+
+    const handleContentWheel = (e: WheelEvent) => {
+      // 阻止默认行为和冒泡
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // 手动控制滚动
+      contentContainer.scrollTop += e.deltaY;
+    };
+
+    contentContainer.addEventListener('wheel', handleContentWheel, { passive: false });
+    
+    return () => {
+      contentContainer.removeEventListener('wheel', handleContentWheel);
     };
   }, []);
 
@@ -213,7 +235,9 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
           width: 'auto',
           minWidth: '400px',
           maxWidth: '800px',
-          maxHeight: '80vh'
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         <div className="sticky top-0 z-10 bg-background p-4 border-b">
@@ -240,46 +264,48 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
           <h2 className="text-2xl font-bold">{title}</h2>
         </div>
         
-        <div className="p-4 pt-0 bg-background">
-          <ScrollArea className="max-h-[calc(80vh-7rem)]">
-            <div className="prose prose-sm dark:prose-invert max-w-none pr-4 bg-background">
-              {formattedContent.map((item, index) => {
-                switch (item.type) {
-                  case 'h1':
-                    return (
-                      <h1 key={index} className="text-2xl font-bold mt-8 mb-4 pb-2 border-b">
-                        {item.content}
-                      </h1>
-                    );
-                  case 'h2':
-                    return (
-                      <h2 key={index} className="text-xl font-bold mt-6 mb-3">
-                        {item.content}
-                      </h2>
-                    );
-                  case 'h3':
-                    return (
-                      <h3 key={index} className="text-lg font-semibold mt-4 mb-2">
-                        {item.content}
-                      </h3>
-                    );
-                  case 'list-item':
-                    return (
-                      <div key={index} className="flex ml-4 mb-2 bg-background">
-                        <span className="mr-2">{item.content.startsWith('-') ? '•' : '•'}</span>
-                        <p>{item.content.substring(1).trim()}</p>
-                      </div>
-                    );
-                  default:
-                    return (
-                      <p key={index} className="my-2">
-                        {item.content}
-                      </p>
-                    );
-                }
-              })}
-            </div>
-          </ScrollArea>
+        <div 
+          ref={scrollContentRef}
+          className="p-4 pt-0 bg-background flex-1 overflow-y-auto"
+          style={{ maxHeight: 'calc(80vh - 9rem)' }}
+        >
+          <div className="prose prose-sm dark:prose-invert max-w-none pr-4 pb-4 bg-background">
+            {formattedContent.map((item, index) => {
+              switch (item.type) {
+                case 'h1':
+                  return (
+                    <h1 key={index} className="text-2xl font-bold mt-8 mb-4 pb-2 border-b">
+                      {item.content}
+                    </h1>
+                  );
+                case 'h2':
+                  return (
+                    <h2 key={index} className="text-xl font-bold mt-6 mb-3">
+                      {item.content}
+                    </h2>
+                  );
+                case 'h3':
+                  return (
+                    <h3 key={index} className="text-lg font-semibold mt-4 mb-2">
+                      {item.content}
+                    </h3>
+                  );
+                case 'list-item':
+                  return (
+                    <div key={index} className="flex ml-4 mb-2 bg-background">
+                      <span className="mr-2">{item.content.startsWith('-') ? '•' : '•'}</span>
+                      <p>{item.content.substring(1).trim()}</p>
+                    </div>
+                  );
+                default:
+                  return (
+                    <p key={index} className="my-2">
+                      {item.content}
+                    </p>
+                  );
+              }
+            })}
+          </div>
         </div>
       </Card>
     </div>
