@@ -118,7 +118,6 @@ export const useFlowStore = create<FlowState>()(
         set({ nodes: updatedNodes });
       },
 
-
       generateFlow: async (prompt: string) => {
         try {
           const flowData = await generateFlowFromPrompt(prompt);

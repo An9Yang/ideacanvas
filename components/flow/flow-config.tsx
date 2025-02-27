@@ -5,6 +5,7 @@ export const NODE_TYPES: NodeTypes = {
   product: FlowNode,
   external: FlowNode,
   context: FlowNode,
+  guide: FlowNode,
 };
 
 export const EDGE_OPTIONS = {
