@@ -2,7 +2,7 @@ export type Language = 'zh' | 'en';
 
 export const translations = {
   zh: {
-    appTitle: 'App Blueprint',
+    appTitle: 'App Blueprinter',
     inputPlaceholder: '请输入您的需求描述，例如："我需要一个电商网站"',
     generateButton: '生成流程图',
     clearButton: '清空',
@@ -47,7 +47,7 @@ export const translations = {
     duplicateContent: '复制内容'
   },
   en: {
-    appTitle: 'App Blueprint',
+    appTitle: 'App Blueprinter',
     inputPlaceholder: 'Please enter your requirements, e.g. "I need an e-commerce website"',
     generateButton: 'Generate Flow',
     clearButton: 'Clear',

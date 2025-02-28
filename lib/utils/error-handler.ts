@@ -95,9 +95,20 @@ export function sanitizeJSON(jsonStr: string): string {
     jsonStr = match[0];
   }
 
+  // 处理中文字符的编码问题
+  try {
+    // 尝试进行一次解码和编码，确保中文字符的一致性
+    const decodedStr = decodeURIComponent(encodeURIComponent(jsonStr));
+    if (decodedStr && typeof decodedStr === 'string') {
+      jsonStr = decodedStr;
+    }
+  } catch (e) {
+    // 如果编码/解码失败，保持原始字符串
+    console.warn('JSON字符串编码/解码处理失败:', e);
+  }
+
   // 将中文全角引号替换为英文双引号（如果有的话）
-  // 这里示例使用 /“/g，但注意有些输入可能是不同的全角字符
-  jsonStr = jsonStr.replace(/“|”/g, '"');
+  jsonStr = jsonStr.replace(/"|"|「|」|『|』/g, '"');
 
   // 替换连续的 . 为单个空字符串（防止出现 ... 破坏 JSON）
   jsonStr = jsonStr.replace(/\.\.\.+/g, '');

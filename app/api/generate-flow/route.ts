@@ -61,24 +61,47 @@ export async function POST(request: Request) {
     const cleanedContent = sanitizeJSON(trimmedContent);
     console.log('清洗后的内容:', cleanedContent);
 
-    // 8. 校验 JSON 格式
-    const { isValid, error } = validateJSON(cleanedContent);
+    // 8. 添加额外的中文字符处理
+    let processedContent = cleanedContent;
+    try {
+      // 先尝试检测是否是有效的JSON
+      JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.log('初步JSON解析失败，尝试额外处理中文字符...');
+      // 尝试替换一些可能导致问题的Unicode字符
+      processedContent = cleanedContent
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        // 处理一些特殊的Unicode空格
+        .replace(/[\u00A0\u1680\u180E\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ');
+      
+      // 为安全起见，再次尝试解码和编码
+      try {
+        const reEncoded = encodeURIComponent(processedContent);
+        processedContent = decodeURIComponent(reEncoded);
+      } catch (e) {
+        console.warn('重编码处理失败:', e);
+      }
+    }
+
+    // 9. 校验 JSON 格式
+    const { isValid, error } = validateJSON(processedContent);
     if (!isValid) {
       console.error('JSON 校验错误:', error);
-      console.error('校验失败的内容:', cleanedContent);
+      console.error('校验失败的内容:', processedContent);
       throw new Error(`JSON 校验失败: ${error}`);
     }
 
-    // 9. 尝试解析 JSON 字符串，如果失败则记录错误信息
+    // 10. 尝试解析 JSON 字符串，如果失败则记录错误信息
     let flowData: GeneratedFlow;
     try {
-      flowData = JSON.parse(cleanedContent);
+      flowData = JSON.parse(processedContent);
     } catch (parseError) {
-      console.error('JSON.parse 解析失败. 清洗后的内容:', cleanedContent);
+      console.error('JSON.parse 解析失败. 清洗后的内容:', processedContent);
       throw parseError;
     }
 
-    // 10. 格式化数据：处理节点和边（例如对坐标取整）
+    // 11. 格式化数据：处理节点和边（例如对坐标取整）
     const formattedData = {
       nodes: flowData.nodes.map(node => ({
         type: node.type as NodeType,
