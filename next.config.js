@@ -21,8 +21,7 @@ const nextConfig = {
     ]
   },
   experimental: {
-    largePageDataBytes: 128 * 1000,
-    outputFileTracingIgnores: ['**/node_modules/canvas/**'],
+    largePageDataBytes: 128 * 1000
   }
 };
 
