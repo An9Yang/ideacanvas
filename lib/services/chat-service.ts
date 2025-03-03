@@ -19,10 +19,10 @@ function getOpenAIClient() {
 export async function createAssistant() {
   const client = getOpenAIClient();
   return await client.beta.assistants.create({
-    name: "PDF Analysis Assistant",
-    instructions: "You are an expert assistant that helps users analyze and understand PDF documents. Use the provided documents to answer questions accurately and cite your sources. Please provide answers in a clear format without citation markers like [4:0 source]",
+    name: "IdeaCanvas Assistant",
+    instructions: "You are an expert assistant that helps users analyze and understand their ideas. Provide clear and concise answers to questions.",
     model: "gpt-4o",
-    tools: [{ type: "file_search" }],
+    tools: [],
   });
 }
 
@@ -31,25 +31,8 @@ export async function createThread() {
   return await client.beta.threads.create();
 }
 
-export async function uploadPDFAndAttachToThread(file: File, threadId: string) {
-  const client = getOpenAIClient();
-
-  // Upload the file to OpenAI
-  const uploadedFile = await client.files.create({
-    file,
-    purpose: "assistants"
-  });
-
-  // Create a message with the file attachment
-  await client.beta.threads.messages.create(threadId, {
-    role: "user",
-    content: "I've uploaded a PDF document for analysis. Please confirm you can access it.",
-    // @ts-ignore - OpenAI API supports file_ids but type definition is outdated
-    file_ids: [uploadedFile.id]
-  });
-
-  return uploadedFile;
-}
+// PDF 相关功能已移除
+// export async function uploadPDFAndAttachToThread(file: File, threadId: string) { ... }
 
 export async function sendMessage(threadId: string, assistantId: string, content: string) {
   const client = getOpenAIClient();

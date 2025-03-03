@@ -1,5 +1,20 @@
 # Changelog
 
+## 2025-03-03
+
+### 清理未使用的 PDF 相关代码（2025-03-03 01:15）
+
+1. 移除 PDF 存储相关代码
+   - 移除了 prompt-node.tsx 和 results-panel.tsx 中对 pdf-store 的依赖
+   - 重构了结果显示逻辑，不再依赖 PDF 文件信息
+
+2. 清理 OpenAI 服务中的 PDF 功能
+   - 移除了 chat-service.ts 中的 uploadPDFAndAttachToThread 函数
+   - 移除了 openai.ts 和 openai-service.ts 中的 createVectorStore 和 uploadFileToVectorStore 函数
+   - 更新了 createAssistant 函数，移除 PDF 相关的描述和工具
+
+
+
 ## 2025-02-20
 
 ### 修复 AI 返回内容被截断问题（2025-02-20 12:14）

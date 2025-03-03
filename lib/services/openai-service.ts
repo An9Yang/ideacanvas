@@ -32,29 +32,8 @@ export async function generateCompletion(prompt: string) {
   }
 }
 
-export async function createVectorStore(name: string) {
-  const client = getOpenAIClient();
-  return await client.beta.vectorStores.create({ name });
-}
+// PDF 相关功能已移除
+// export async function createVectorStore(name: string) { ... }
 
-export async function uploadFileToVectorStore(vectorStoreId: string, file: File) {
-  const client = getOpenAIClient();
-  
-  // First, upload the file to OpenAI
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('purpose', 'assistants');
-  
-  const uploadedFile = await client.files.create({
-    file,
-    purpose: 'assistants'
-  });
-
-  // Add the file to the vector store
-  const fileBatch = await client.beta.vectorStores.fileBatches.create(
-    vectorStoreId,
-    { file_ids: [uploadedFile.id] }
-  );
-
-  return { uploadedFile, fileBatch };
-}
+// PDF 相关功能已移除
+// export async function uploadFileToVectorStore(vectorStoreId: string, file: File) { ... }

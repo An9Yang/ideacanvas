@@ -16,46 +16,20 @@ function getOpenAIClient() {
   return openaiClient;
 }
 
-export async function createVectorStore(name: string) {
-  const client = getOpenAIClient();
-  return await client.beta.vectorStores.create({ name });
-}
+// PDF 相关功能已移除
+// export async function createVectorStore(name: string) { ... }
 
-export async function uploadFileToVectorStore(vectorStoreId: string, file: File) {
-  const client = getOpenAIClient();
-  
-  // First, upload the file to OpenAI
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('purpose', 'assistants');
-  
-  const uploadedFile = await client.files.create({
-    file,
-    purpose: 'assistants'
-  });
+// PDF 相关功能已移除
+// export async function uploadFileToVectorStore(vectorStoreId: string, file: File) { ... }
 
-  // Add the file to the vector store
-  const fileBatch = await client.beta.vectorStores.fileBatches.create(
-    vectorStoreId,
-    { file_ids: [uploadedFile.id] }
-  );
-
-  return { uploadedFile, fileBatch };
-}
-
-export async function createAssistant(vectorStoreId: string) {
+export async function createAssistant() {
   const client = getOpenAIClient();
   
   return await client.beta.assistants.create({
-    name: "PDF Assistant",
-    instructions: "You are a helpful assistant. Do not include any citation mark like [4:0 xxx.pdf] in the result",
+    name: "IdeaCanvas Assistant",
+    instructions: "You are a helpful assistant that helps users understand and develop their ideas.",
     model: "gpt-4o",
-    tools: [{ type: "file_search" }],
-    tool_resources: {
-      file_search: {
-        vector_store_ids: [vectorStoreId]
-      }
-    }
+    tools: []
   });
 }
 

@@ -5,13 +5,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useFlowStore } from "@/lib/stores/flow-store";
-import { usePDFStore } from "@/lib/stores/pdf-store";
+// PDF store 已移除
 import { formatText } from "@/lib/utils/text-formatter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function ResultsPanel() {
   const { nodes } = useFlowStore();
-  const { uploadedFiles } = usePDFStore();
   const [selectedNode, setSelectedNode] = useState(0);
   
   const nodesWithResults = nodes.filter(node => node.data.results && node.data.results.length > 0);
@@ -24,13 +23,7 @@ export function ResultsPanel() {
     );
   }
 
-  if (!uploadedFiles.length) {
-    return (
-      <div className="h-full flex items-center justify-center text-muted-foreground">
-        <p>No PDFs uploaded yet</p>
-      </div>
-    );
-  }
+  // 移除对 PDF 文件的检查
 
   const currentNode = nodesWithResults[selectedNode];
 
@@ -52,22 +45,17 @@ export function ResultsPanel() {
 
       <ScrollArea className="flex-1">
         <div className="space-y-4">
-          {uploadedFiles.map((file) => {
-            const result = currentNode.data.results?.find((r: { fileId: string }) => r.fileId === file.id);
-            if (!result) return null;
-
-            return (
-              <Card key={file.id} className="p-4">
-                <h3 className="font-semibold mb-2 text-lg">{file.name}</h3>
-                <div 
-                  className="prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ 
-                    __html: formatText(result.result)
-                  }}
-                />
-              </Card>
-            );
-          })}
+          {currentNode.data.results?.map((result: { fileId: string; result: string }) => (
+            <Card key={result.fileId} className="p-4">
+              <h3 className="font-semibold mb-2 text-lg">ID: {result.fileId}</h3>
+              <div 
+                className="prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ 
+                  __html: formatText(result.result)
+                }}
+              />
+            </Card>
+          ))}
         </div>
       </ScrollArea>
     </div>
