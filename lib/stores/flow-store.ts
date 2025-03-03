@@ -28,7 +28,11 @@ const cleanNodeData = (nodes: Node[]) =>
     },
     data: {
       title: data.title,
-      content: data.content?.slice(0, 4000) // 限制内容长度
+      content: typeof data.content === 'string' 
+        ? data.content.slice(0, 4000) // 限制内容长度
+        : typeof data.content === 'object'
+          ? JSON.stringify(data.content).slice(0, 4000) // 如果是对象则先转换为字符串
+          : String(data.content || '').slice(0, 4000) // 其他类型转为字符串
     },
     draggable: true
   }));
