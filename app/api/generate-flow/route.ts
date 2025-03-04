@@ -11,7 +11,11 @@ export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
 
 // 检测用户输入语言
-function detectLanguage(text: string): string {
+function detectLanguage(text: string | any): string {
+  // 如果不是字符串，返回默认语言
+  if (typeof text !== 'string') {
+    return 'en';
+  }
   // 检测是否包含中文字符
   const hasChinese = /[\u4e00-\u9fa5]/.test(text);
   if (hasChinese) return 'zh';
@@ -34,9 +38,15 @@ function validateContentStructure(flowData: GeneratedFlow, userLanguage: string)
   
   // 检查节点内容语言一致性
   for (const node of flowData.nodes) {
+    // 首先检查node.content是否为字符串
+    if (typeof node.content !== 'string') {
+      errors.push(`节点 "${node.title}" 的内容不是字符串类型`);
+      continue; // 跳过后续检查
+    }
+    
     // 检查节点内容语言一致性
     const nodeLanguage = detectLanguage(node.content);
-    if (nodeLanguage !== userLanguage && userLanguage !== 'en') {
+    if (nodeLanguage !== userLanguage) {
       errors.push(`节点 "${node.title}" 的内容语言 (${nodeLanguage}) 与用户请求语言 (${userLanguage}) 不一致`);
     }
     
@@ -55,8 +65,14 @@ function validateContentStructure(flowData: GeneratedFlow, userLanguage: string)
   
   // 检查边描述语言一致性
   for (const edge of flowData.edges) {
+    // 首先检查edge.description是否为字符串
+    if (typeof edge.description !== 'string') {
+      errors.push(`从 "${edge.source}" 到 "${edge.target}" 的边描述不是字符串类型`);
+      continue; // 跳过后续检查
+    }
+    
     const edgeLanguage = detectLanguage(edge.description);
-    if (edgeLanguage !== userLanguage && userLanguage !== 'en') {
+    if (edgeLanguage !== userLanguage) {
       errors.push(`从 "${edge.source}" 到 "${edge.target}" 的边描述语言 (${edgeLanguage}) 与用户请求语言 (${userLanguage}) 不一致`);
     }
     
@@ -154,10 +170,13 @@ export async function POST(request: Request) {
     console.log('使用的部署名称:', config.deploymentName);
 
     // 5. 调用 Azure OpenAI 服务，传入系统提示和用户输入
+    // 添加用户语言信息到系统提示
+    const systemPrompt = `${FLOW_GENERATION_PROMPT}\n\n当前用户语言: ${userLanguage === 'en' ? 'English' : '中文'}`;
+    
     const response = await client.chat.completions.create({
       model: config.deploymentName,
       messages: [
-        { role: 'system', content: FLOW_GENERATION_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: body.prompt }
       ],
       temperature: 0.7, // 增加创造性
@@ -220,7 +239,70 @@ export async function POST(request: Request) {
       throw parseError;
     }
 
-    // 12. 验证节点内容是否足够详细
+    // 12. 验证内容语言一致性
+    const contentStructureValidation = validateContentStructure(flowData, userLanguage);
+    if (!contentStructureValidation.isValid) {
+      console.warn('内容语言验证警告:', contentStructureValidation.errors.join(', '));
+      
+      // 如果语言不一致，尝试重新生成一次
+      if (contentStructureValidation.errors.some(err => err.includes('语言') || err.includes('language'))) {
+        console.log('检测到语言不一致，尝试重新生成...');
+        
+        // 增强系统提示，强调语言要求
+        const enhancedSystemPrompt = `${systemPrompt}\n\n【重要警告】当前检测到输出语言与用户语言不一致。用户语言是: ${userLanguage === 'en' ? 'ENGLISH' : '中文'}。请确保所有输出内容都使用${userLanguage === 'en' ? 'ENGLISH' : '中文'}。`;
+        
+        try {
+          // 重新生成
+          const retryResponse = await client.chat.completions.create({
+            model: config.deploymentName,
+            messages: [
+              { role: 'system', content: enhancedSystemPrompt },
+              { role: 'user', content: body.prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 16000
+          });
+          
+          // 解析重新生成的结果
+          const retryContent = retryResponse.choices[0]?.message?.content || '';
+          const sanitizedRetryContent = sanitizeJSON(retryContent);
+          
+          // 验证JSON格式
+          const retryJsonValidation = validateJSON(sanitizedRetryContent);
+          if (!retryJsonValidation.isValid) {
+            console.warn('重新生成的JSON验证失败:', retryJsonValidation.error);
+            console.warn('使用原始结果继续处理');
+            // 如果JSON验证失败，使用原始结果继续
+            return;
+          }
+          
+          // 解析JSON
+          let retryFlowData: GeneratedFlow;
+          try {
+            retryFlowData = JSON.parse(sanitizedRetryContent);
+          } catch (retryParseError) {
+            console.error('重新生成的JSON解析失败:', retryParseError);
+            // 如果解析失败，使用原始结果继续
+            return;
+          }
+          
+          // 再次验证语言一致性
+          const retryValidation = validateContentStructure(retryFlowData, userLanguage);
+          if (retryValidation.isValid || retryValidation.errors.length < contentStructureValidation.errors.length) {
+            // 如果重新生成的内容语言一致性更好，则使用重新生成的内容
+            console.log('重新生成成功，语言一致性已改善');
+            flowData = retryFlowData;
+          } else {
+            console.log('重新生成后语言一致性仍未改善，使用原始结果');
+          }
+        } catch (retryError) {
+          console.error('重新生成失败:', retryError);
+          // 如果重新生成失败，继续使用原始结果
+        }
+      }
+    }
+
+    // 13. 验证节点内容是否足够详细
     for (const node of flowData.nodes) {
       const contentValidation = validateNodeContent(node);
       if (!contentValidation.isValid) {
@@ -229,7 +311,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 13. 格式化数据：处理节点和边（例如对坐标取整）
+    // 14. 格式化数据：处理节点和边（例如对坐标取整）
     const formattedData = {
       nodes: flowData.nodes.map(node => ({
         ...node,
@@ -238,7 +320,9 @@ export async function POST(request: Request) {
           y: Math.round(node.position.y)
         }
       })),
-      edges: flowData.edges
+      edges: flowData.edges,
+      // 添加用户语言信息，便于前端同步更新UI语言
+      userLanguage
     };
 
     return NextResponse.json(formattedData);

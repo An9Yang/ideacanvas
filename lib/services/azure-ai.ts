@@ -1,6 +1,7 @@
 // azure-ai.ts
 import { GeneratedFlow } from '@/lib/types/flow';
 import { handleAPIError } from '@/lib/utils/error-handler';
+import { useLanguageStore } from '@/lib/stores/language-store';
 
 export async function generateFlowFromPrompt(prompt: string): Promise<GeneratedFlow> {
   try {
@@ -50,6 +51,13 @@ export async function generateFlowFromPrompt(prompt: string): Promise<GeneratedF
       }
     }
 
+    // 如果响应中包含用户语言信息，更新UI语言
+    if (data.userLanguage) {
+      console.log('从响应中检测到用户语言:', data.userLanguage);
+      const setLanguage = useLanguageStore.getState().setLanguage;
+      setLanguage(data.userLanguage);
+    }
+    
     return data;
   } catch (error: any) {
     console.error('generateFlowFromPrompt 错误:', error);
