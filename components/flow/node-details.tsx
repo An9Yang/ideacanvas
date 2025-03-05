@@ -406,121 +406,115 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
               </h1>
             )}
             
-            {/* 处理其余内容，将相关内容组合到一个callout中 */}
+            {/* 处理其余内容，将相关内容分组到同一个callout中 */}
             {(() => {
               // 跳过第一个标题（如果存在）
               const startIndex = formattedContent.length > 0 && formattedContent[0].type === 'h1' ? 1 : 0;
-              let currentSection = null;
-              const renderedItems = [];
               
+              // 重新组织内容，将标题与后续相关内容放在一起
+              const sections = [];
+              let currentSection = null;
+              
+              // 第一步：整理内容到section中
               for (let i = startIndex; i < formattedContent.length; i++) {
                 const item = formattedContent[i];
                 
                 // 如果是标题，开始一个新的section
                 if (['h1', 'h2', 'h3'].includes(item.type)) {
-                  // 如果有当前section，先渲染它
+                  // 如果已有当前section，保存它
                   if (currentSection) {
-                    renderedItems.push(
-                      <Callout key={`section-${currentSection.index}`} title={currentSection.title} variant="default">
-                        {currentSection.content}
-                      </Callout>
-                    );
+                    sections.push(currentSection);
                   }
                   
                   // 创建新的section
                   currentSection = {
-                    index: i,
+                    index: sections.length,
                     title: item.content,
-                    content: []
+                    items: []
                   };
                 }
-                // 如果是section类型，直接使用它的内容
+                // 如果已有section类型项，直接将其内容合并到当前section
                 else if (item.type === 'section') {
-                  // 如果有当前section，先渲染它
                   if (currentSection) {
-                    renderedItems.push(
-                      <Callout key={`section-${currentSection.index}`} title={currentSection.title} variant="default">
-                        {currentSection.content}
-                      </Callout>
-                    );
-                    currentSection = null;
+                    // 将section的items合并到当前section
+                    if (item.items) {
+                      currentSection.items = [...currentSection.items, ...item.items];
+                    }
+                  } else {
+                    // 如果没有当前section，将此section作为独立section
+                    currentSection = {
+                      index: sections.length,
+                      title: item.title || '',
+                      items: item.items || []
+                    };
+                    sections.push(currentSection);
+                    currentSection = null; // 重置，因为已保存
+                  }
+                }
+                // 对于其他内容类型，添加到当前section
+                else {
+                  // 如果没有当前section，创建一个无标题的section
+                  if (!currentSection) {
+                    currentSection = {
+                      index: sections.length,
+                      title: '',
+                      items: []
+                    };
                   }
                   
-                  // 渲染section的内容
-                  renderedItems.push(
-                    <Callout key={`section-direct-${i}`} title={item.title} variant="default">
-                      {item.items && item.items.map((subItem, subIndex) => {
-                        switch (subItem.type) {
-                          case 'list-item':
-                            return (
-                              <div key={`item-${i}-${subIndex}`} className="flex ml-2 mb-2">
-                                <span className="mr-2">{subItem.content.startsWith('-') ? '•' : '•'}</span>
-                                <span className="text-sm">{subItem.content.substring(1).trim()}</span>
-                              </div>
-                            );
-                          default:
-                            return (
-                              <p key={`item-${i}-${subIndex}`} className="my-2 text-sm">
-                                {subItem.content}
-                              </p>
-                            );
-                        }
-                      })}
-                    </Callout>
-                  );
+                  // 添加内容到当前section
+                  currentSection.items.push(item);
                 }
-                // 如果是其他内容类型，添加到当前section
-                else {
-                  if (currentSection) {
-                    if (item.type === 'list-item') {
-                      currentSection.content.push(
-                        <div key={`content-${i}`} className="flex ml-2 mb-2">
-                          <span className="mr-2">{item.content.startsWith('-') ? '•' : '•'}</span>
-                          <span className="text-sm">{item.content.substring(1).trim()}</span>
-                        </div>
-                      );
-                    } else {
-                      currentSection.content.push(
-                        <p key={`content-${i}`} className="my-2 text-sm">
-                          {item.content}
-                        </p>
-                      );
-                    }
-                  }
-                  // 如果没有当前section，创建一个无标题的section
-                  else {
-                    if (item.type === 'list-item') {
-                      renderedItems.push(
-                        <Callout key={`item-${i}`} variant="default">
-                          <div className="flex ml-2 mb-2">
+              }
+              
+              // 保存最后一个section（如果有）
+              if (currentSection) {
+                sections.push(currentSection);
+              }
+              
+              // 第二步：渲染整理后的sections
+              return sections.map((section, sectionIndex) => {
+                // 只有在有标题和内容时才显示callout
+                if (section.items.length === 0 && !section.title) {
+                  return null;
+                }
+                
+                return (
+                  <Callout 
+                    key={`section-${sectionIndex}`} 
+                    title={section.title} 
+                    variant="default"
+                  >
+                    {section.items.map((item, itemIndex) => {
+                      const key = `item-${sectionIndex}-${itemIndex}`;
+                      
+                      if (item.type === 'list-item') {
+                        return (
+                          <div key={key} className="flex ml-2 mb-2">
                             <span className="mr-2">{item.content.startsWith('-') ? '•' : '•'}</span>
                             <span className="text-sm">{item.content.substring(1).trim()}</span>
                           </div>
-                        </Callout>
-                      );
-                    } else {
-                      renderedItems.push(
-                        <Callout key={`item-${i}`} variant="default">
-                          <p className="my-1 text-sm">
+                        );
+                      } else if (item.type === 'paragraph') {
+                        return (
+                          <p key={key} className="my-2 text-sm">
                             {item.content}
                           </p>
-                        </Callout>
-                      );
-                    }
-                  }
-                }
-              }
-              
-              // 渲染最后一个section（如果有）
-              if (currentSection) {
-                renderedItems.push(
-                  <Callout key={`section-last`} title={currentSection.title} variant="default">
-                    {currentSection.content}
+                        );
+                      } else if (['h1', 'h2', 'h3'].includes(item.type)) {
+                        // 通常不会执行到这里，因为标题已作为section标题处理
+                        // 但为了完整性，如果有子标题的情况也处理一下
+                        return (
+                          <h3 key={key} className="font-semibold mt-3 mb-2 text-sm">
+                            {item.content}
+                          </h3>
+                        );
+                      }
+                      return null;
+                    })}
                   </Callout>
                 );
-              }
-              
-              return renderedItems;
+              });
             })()}
           </div>
         </div>
