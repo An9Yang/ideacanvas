@@ -143,13 +143,15 @@ export function getNodeTypeText(type: NodeType, language: Language): string {
       product: '产品功能',
       external: '外部服务',
       context: '上下文信息',
-      guide: '开发指南'
+      guide: '开发指南',
+      document: '项目文档'
     },
     en: {
       product: 'Product Feature',
       external: 'External Service',
       context: 'Context Information',
-      guide: 'Development Guide'
+      guide: 'Development Guide',
+      document: 'Project Documentation'
     }
   };
   

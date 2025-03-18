@@ -26,6 +26,8 @@ const getTypeStyle = (type: NodeType) => {
       return 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300';
     case 'guide':
       return 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300';
+    case 'document':
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300';
     default:
       return 'bg-background text-foreground';
   }
@@ -430,7 +432,7 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
                   currentSection = {
                     index: sections.length,
                     title: item.content,
-                    items: []
+                    items: [] as Array<{type: string, content: string}>
                   };
                 }
                 // 如果已有section类型项，直接将其内容合并到当前section
@@ -458,7 +460,7 @@ export const NodeDetails = ({ title, content, type, onClose }: NodeDetailsProps)
                     currentSection = {
                       index: sections.length,
                       title: '',
-                      items: []
+                      items: [] as Array<{type: string, content: string}>
                     };
                   }
                   

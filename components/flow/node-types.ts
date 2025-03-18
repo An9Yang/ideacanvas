@@ -6,4 +6,5 @@ export const createNodeTypes = (): NodeTypes => ({
   external: FlowNode,
   context: FlowNode,
   guide: FlowNode,
+  document: FlowNode,
 }); 

@@ -27,14 +27,16 @@ import {
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { APIKeyDialog } from "@/components/settings/api-key-dialog";
 import { useTranslation } from "@/hooks/useTranslation";
+import { NodeType } from "@/lib/types/flow";
 
 interface FlowToolbarProps {
-  onAddNode: () => void;
+  onAddNode: (nodeType?: NodeType) => void;
   onExecuteFlow: () => void;
 }
 
 export function FlowToolbar({ onAddNode, onExecuteFlow }: FlowToolbarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isNodeTypeDialogOpen, setIsNodeTypeDialogOpen] = useState(false);
   const [flowName, setFlowName] = useState("");
   const { flows, saveFlow, loadFlow } = useFlowStore();
   const { t } = useTranslation();
@@ -54,7 +56,7 @@ export function FlowToolbar({ onAddNode, onExecuteFlow }: FlowToolbarProps) {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button onClick={onAddNode} variant="secondary" className="flex items-center gap-2">
+            <Button onClick={() => setIsNodeTypeDialogOpen(true)} variant="secondary" className="flex items-center gap-2">
               <Plus className="w-4 h-4" />
               {t('addNode')}
             </Button>
@@ -63,6 +65,32 @@ export function FlowToolbar({ onAddNode, onExecuteFlow }: FlowToolbarProps) {
             <p>{t('addNodeTooltip')}</p>
           </TooltipContent>
         </Tooltip>
+        
+        <Dialog open={isNodeTypeDialogOpen} onOpenChange={setIsNodeTypeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>选择节点类型</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <Button onClick={() => { onAddNode('context' as NodeType); setIsNodeTypeDialogOpen(false); }}
+                className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950 text-black dark:text-white hover:bg-yellow-100 hover:dark:bg-yellow-900">
+                上下文节点
+              </Button>
+              <Button onClick={() => { onAddNode('external' as NodeType); setIsNodeTypeDialogOpen(false); }}
+                className="border-blue-500 bg-blue-50 dark:bg-blue-950 text-black dark:text-white hover:bg-blue-100 hover:dark:bg-blue-900">
+                外部服务节点
+              </Button>
+              <Button onClick={() => { onAddNode('guide' as NodeType); setIsNodeTypeDialogOpen(false); }}
+                className="border-green-500 bg-green-50 dark:bg-green-950 text-black dark:text-white hover:bg-green-100 hover:dark:bg-green-900">
+                开发指南节点
+              </Button>
+              <Button onClick={() => { onAddNode('document' as NodeType); setIsNodeTypeDialogOpen(false); }}
+                className="border-emerald-500 bg-emerald-50 dark:bg-emerald-950 text-black dark:text-white hover:bg-emerald-100 hover:dark:bg-emerald-900">
+                文档节点
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <Tooltip>
           <TooltipTrigger asChild>

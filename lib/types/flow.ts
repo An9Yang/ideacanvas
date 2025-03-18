@@ -1,4 +1,4 @@
-export type NodeType = 'product' | 'external' | 'context' | 'guide';
+export type NodeType = 'product' | 'external' | 'context' | 'guide' | 'document';
 
 export interface Flow {
   id: string;

@@ -3,7 +3,7 @@
 import React, { useCallback, Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Connection, Edge, NodeChange, applyNodeChanges, Node as ReactFlowNode } from 'reactflow';
-import { Node } from '@/lib/types/flow';
+import { Node, NodeType } from '@/lib/types/flow';
 import 'reactflow/dist/style.css';
 import { useFlowStore } from '@/lib/stores/flow-store';
 import { useI18nToast } from '@/hooks/use-i18n-toast';
@@ -62,6 +62,7 @@ export function FlowCanvas() {
   const [isClient, setIsClient] = useState(false);
   const { t } = useTranslation();
   const toast = useI18nToast();
+  const { addNode } = useFlowStore();
   
   useEffect(() => {
     setIsClient(true);
@@ -114,6 +115,41 @@ export function FlowCanvas() {
     edgesToDelete.forEach(edge => removeEdge(edge.id));
     toast.success('edgeDeleted');
   }, [removeEdge, toast]);
+  
+  // 处理添加节点
+  const handleAddNode = useCallback((nodeType = 'product' as NodeType) => {
+    // 计算视窗中心位置
+    const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+    
+    const position = {
+      x: reactFlowBounds.width / 2 - 75,
+      y: reactFlowBounds.height / 2 - 75,
+    };
+    
+    // 根据不同节点类型设置不同标题
+    let nodeTitle = '';
+    switch(nodeType) {
+      case 'context':
+        nodeTitle = '上下文节点';
+        break;
+      case 'external':
+        nodeTitle = '外部服务节点';
+        break;
+      case 'guide':
+        nodeTitle = '开发指南节点';
+        break;
+      case 'document':
+        nodeTitle = '项目文档节点';
+        break;
+      default:
+        nodeTitle = '新节点';
+    }
+    
+    // 添加新节点
+    addNode(position, nodeType as NodeType, nodeTitle, '');
+    toast.success('nodeAdded' as any);
+  }, [addNode, toast]);
 
   if (!isClient) {
     return (
@@ -125,6 +161,7 @@ export function FlowCanvas() {
 
   return (
     <div className="h-full w-full">
+      <FlowToolbar onAddNode={handleAddNode} onExecuteFlow={() => {}} />
       <Suspense fallback={<div>{t('loading')}</div>}>
         <ReactFlowComponent
           nodes={nodes}
