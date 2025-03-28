@@ -74,6 +74,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@swc/register": "^0.1.10",
     "@tailwindcss/typography": "^0.5.16",
     "@types/marked": "^5.0.2",
     "@types/uuid": "^9.0.8",

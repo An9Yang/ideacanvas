@@ -1,15 +1,19 @@
-import OpenAI from 'openai';
-import { config } from './config';
+import { AzureOpenAI } from 'openai';
+import { config } from '../config';
 
-let openaiClient: OpenAI | null = null;
+let openaiClient: AzureOpenAI | null = null;
 
 function getOpenAIClient() {
   if (!openaiClient) {
     if (!config.openai.apiKey) {
-      throw new Error('OpenAI API key is missing');
+      throw new Error('Azure OpenAI API密钥缺失');
     }
-    openaiClient = new OpenAI({
-      apiKey: config.openai.apiKey,
+    const apiKey = config.openai.apiKey || '';
+    openaiClient = new AzureOpenAI({
+      apiKey,
+      endpoint: config.openai.endpoint,
+      deployment: config.openai.deploymentName,
+      apiVersion: config.openai.apiVersion,
       dangerouslyAllowBrowser: true,
     });
   }
@@ -26,9 +30,9 @@ export async function createAssistant() {
   const client = getOpenAIClient();
   
   return await client.beta.assistants.create({
-    name: "IdeaCanvas Assistant",
-    instructions: "You are a helpful assistant that helps users understand and develop their ideas.",
-    model: "gpt-4o",
+    name: "IdeaCanvas助手",
+    instructions: "你是一个有用的助手，帮助用户理解和发展他们的想法。",
+    model: config.openai.modelName,
     tools: []
   });
 }

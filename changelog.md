@@ -1,5 +1,26 @@
 # Changelog
 
+## 2025-03-28
+
+### 切换到Azure OpenAI的GPT-4.5 preview模型（2025-03-28 14:40）
+
+1. 更新核心配置
+   - 修改config.ts，添加Azure OpenAI的完整配置
+   - 配置Azure端点：https://y7948-m7dkvj9c-swedencentral.openai.azure.com/
+   - 设置部署名称和模型名称：gpt-4.5-preview
+   - 添加API版本：2024-04-01-preview
+
+2. 客户端代码升级
+   - 将所有OpenAI客户端替换为AzureOpenAI客户端
+   - 更新chat-service.ts、chat.ts、openai.ts和openai-service.ts文件
+   - 增强类型检查，确保类型安全
+
+3. 模型调用参数优化
+   - 添加max_tokens、temperature、top_p等参数
+   - 根据Azure OpenAI的要求调整API调用
+   - 将错误消息本地化为中文，提高用户体验
+   - 将AI助手名称和说明本地化为中文
+
 ## 2025-03-17
 
 ### 优化文档节点生成逻辑（2025-03-17 20:50）
