@@ -323,6 +323,16 @@ export const useFlowStore = create<FlowState>()(
           });
         }
       },
+      
+      loadCloudFlow: (cloudFlow: any) => {
+        // Load flow from cloud storage
+        set({
+          nodes: cloudFlow.nodes || [],
+          edges: cloudFlow.edges || [],
+          history: [],
+          currentHistoryIndex: -1,
+        });
+      },
 
       deleteFlow: (id: string) => {
         set((state) => ({

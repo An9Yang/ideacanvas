@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, FolderOpen, HelpCircle } from "lucide-react";
+import { Save, FolderOpen, HelpCircle, Cloud } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTranslation } from "@/hooks/useTranslation";
+import { FlowManagerDialog } from "./flow-manager-dialog";
 
 interface FlowToolbarProps {
 }
@@ -33,8 +34,9 @@ interface FlowToolbarProps {
 export function FlowToolbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [flowName, setFlowName] = useState("");
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
   const { flows, saveFlow, loadFlow } = useFlowStore();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
 
   const handleSave = () => {
     if (flowName) {
@@ -87,6 +89,15 @@ export function FlowToolbar() {
           </SelectContent>
         </Select>
 
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2"
+          onClick={() => setIsManagerOpen(true)}
+        >
+          <Cloud className="w-4 h-4" />
+          {language === 'zh' ? '云端流程图' : 'Cloud Flows'}
+        </Button>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -106,6 +117,12 @@ export function FlowToolbar() {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      
+      <FlowManagerDialog 
+        open={isManagerOpen} 
+        onOpenChange={setIsManagerOpen}
+        language={language}
+      />
     </div>
   );
 }
