@@ -42,6 +42,7 @@ export const translations = {
     typePromptHint: '在文本区域中输入您的提示',
     connectNodesHint: '通过在手柄之间拖动来连接节点',
     saveFlowHint: '保存您的流程以供以后使用',
+    loadFlowHint: '加载已保存的流程以继续编辑',
     executeFlowHint: '点击"执行流程"运行序列',
     collapse: '收起',
     duplicateContent: '复制内容'
@@ -87,6 +88,7 @@ export const translations = {
     typePromptHint: 'Type your prompt in the text area',
     connectNodesHint: 'Connect nodes by dragging between handles',
     saveFlowHint: 'Save your flow to reuse it later',
+    loadFlowHint: 'Load a saved flow to continue editing',
     executeFlowHint: 'Click "Execute Flow" to run the sequence',
     collapse: 'Collapse',
     duplicateContent: 'Duplicate Content'

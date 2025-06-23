@@ -1,37 +1,21 @@
-import { AzureOpenAI } from 'openai';
-import { config } from '../config';
-
-let openaiClient: AzureOpenAI | null = null;
-
-function getOpenAIClient() {
-  if (!openaiClient) {
-    if (!config.openai.apiKey) {
-      throw new Error('Azure OpenAI API key is missing');
-    }
-    
-    openaiClient = new AzureOpenAI({
-      apiKey: config.openai.apiKey,
-      endpoint: config.openai.endpoint,
-      deployment: config.openai.deploymentName,
-      apiVersion: config.openai.apiVersion,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-  return openaiClient;
-}
+import { aiClient } from './ai-client';
+import { configService, AI_CONFIG } from '@/lib/config';
 
 export async function createAssistant() {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
+  const assistantConfig = configService.getAssistantConfig();
+  const azureConfig = configService.getAzureConfig();
+  
   return await client.beta.assistants.create({
-    name: "IdeaCanvas助手",
-    instructions: "你是一个专业助手，帮助用户分析和理解他们的想法。提供清晰简洁的回答。",
-    model: config.openai.modelName,
+    name: assistantConfig.NAME,
+    instructions: assistantConfig.INSTRUCTIONS,
+    model: azureConfig.deploymentName,
     tools: [],
   });
 }
 
 export async function createThread() {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
   return await client.beta.threads.create();
 }
 
@@ -39,7 +23,7 @@ export async function createThread() {
 // export async function uploadPDFAndAttachToThread(file: File, threadId: string) { ... }
 
 export async function sendMessage(threadId: string, assistantId: string, content: string) {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
 
   // Add the user's message to the thread
   await client.beta.threads.messages.create(threadId, {
@@ -55,8 +39,10 @@ export async function sendMessage(threadId: string, assistantId: string, content
   // Poll for the run completion
   let runStatus = await client.beta.threads.runs.retrieve(threadId, run.id);
   
+  const assistantConfig = configService.getAssistantConfig();
+  
   while (runStatus.status === "queued" || runStatus.status === "in_progress") {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, assistantConfig.POLLING_INTERVAL));
     runStatus = await client.beta.threads.runs.retrieve(threadId, run.id);
   }
 
@@ -70,7 +56,7 @@ export async function sendMessage(threadId: string, assistantId: string, content
 }
 
 export async function getMessages(threadId: string) {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
   const messages = await client.beta.threads.messages.list(threadId);
   return messages.data;
 }

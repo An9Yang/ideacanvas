@@ -1,6 +1,6 @@
 "use client";
 
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
 import { translations } from '@/lib/i18n';
 
@@ -9,16 +9,28 @@ export function useI18nToast() {
   
   return {
     success: (key: keyof typeof translations.en) => {
-      toast.success(t(key));
+      toast({
+        title: t(key),
+        variant: 'default',
+      });
     },
     error: (key: keyof typeof translations.en) => {
-      toast.error(t(key));
+      toast({
+        title: t(key),
+        variant: 'destructive',
+      });
     },
     info: (key: keyof typeof translations.en) => {
-      toast.info(t(key));
+      toast({
+        title: t(key),
+        variant: 'default',
+      });
     },
     warning: (key: keyof typeof translations.en) => {
-      toast.warning(t(key));
+      toast({
+        title: t(key),
+        variant: 'default',
+      });
     }
   };
 } 

@@ -31,6 +31,15 @@ export function handleAPIError(error: unknown): {
       };
     }
 
+    // 处理 403 Forbidden 错误
+    if (error.message.includes('403') || error.message.toLowerCase().includes('forbidden')) {
+      return {
+        error: '资源访问被禁止',
+        details: error.message,
+        statusCode: 403
+      };
+    }
+
     if (error.message.includes('404')) {
       return {
         error: '资源未找到',
@@ -64,17 +73,14 @@ export function handleAPIError(error: unknown): {
 }
 
 /**
- * 校验字符串是否为有效的 JSON 格式
+ * 解析并校验 JSON 字符串
+ * 返回解析后的对象，如果解析失败则抛出错误
  */
-export function validateJSON(jsonStr: string): { isValid: boolean; error?: string } {
+export function validateJSON(jsonStr: string): any {
   try {
-    JSON.parse(jsonStr);
-    return { isValid: true };
+    return JSON.parse(jsonStr);
   } catch (error) {
-    return {
-      isValid: false,
-      error: error instanceof Error ? error.message : '无效的 JSON 格式'
-    };
+    throw new Error(`无效的 JSON 格式: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 }
 
