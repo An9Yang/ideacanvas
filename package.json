@@ -13,6 +13,7 @@
     "dev:o4": "env-cmd -f .env.o4mini next dev"
   },
   "dependencies": {
+    "@azure/storage-blob": "^12.27.0",
     "@next/swc-wasm-nodejs": "13.5.1",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-dropdown-menu": "^2.1.1",

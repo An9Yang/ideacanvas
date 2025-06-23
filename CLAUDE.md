@@ -85,3 +85,34 @@ Currently no automated tests. Manual testing focuses on:
 - Node manipulation on canvas
 - Language switching
 - Save/load functionality
+
+## Cloud Storage Integration
+
+### Azure Blob Storage Setup
+The project now supports Azure Blob Storage for persistent flow storage, solving localStorage quota issues.
+
+#### Configuration
+Add to `.env`:
+```
+AZURE_STORAGE_ACCOUNT_NAME=your_storage_account_name
+AZURE_STORAGE_ACCOUNT_KEY=your_storage_account_key
+AZURE_STORAGE_CONTAINER_NAME=ideacanvas-flows
+```
+
+#### Features
+- **Automatic Save**: Flows are automatically saved to cloud after generation
+- **Hybrid Storage**: localStorage for caching, Azure Blob for persistence
+- **Graceful Degradation**: Works without cloud storage configured
+- **Quota Management**: Automatically cleans old history when localStorage is full
+
+#### API Endpoints
+- `GET /api/flows` - List all flows
+- `POST /api/flows` - Save new flow
+- `GET /api/flows/[id]` - Get specific flow
+- `PUT /api/flows/[id]` - Update flow
+- `DELETE /api/flows/[id]` - Delete flow
+
+#### Known Limitations
+- Currently uses placeholder user ID ('default-user')
+- No authentication implemented yet
+- Manual flow management UI not yet implemented

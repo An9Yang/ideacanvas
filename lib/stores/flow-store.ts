@@ -7,6 +7,7 @@ import { generateFlowFromPrompt } from '@/lib/services/azure-ai';
 import { APP_CONFIG } from '@/lib/config';
 import { flowGenerationService } from '@/lib/services/flow-generation.service';
 import { cleanNodeData, addToHistory, createHistoryState } from '@/lib/utils/history.utils';
+import { cloudStorageService } from '@/lib/services/cloud-storage.service';
 
 // History utilities are now imported from history.utils.ts
 
@@ -136,6 +137,22 @@ export const useFlowStore = create<FlowState>()(
               get().updateNodeContent(documentNode.id, '文档生成失败');
             }
           }, 100);
+          
+          // Step 7: Save to cloud storage (async, non-blocking)
+          setTimeout(async () => {
+            try {
+              const flowName = `Flow - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+              await cloudStorageService.saveFlow({
+                name: flowName,
+                nodes: allNodes,
+                edges: allEdges,
+              });
+              console.log('Flow saved to cloud storage');
+            } catch (error) {
+              console.error('Failed to save flow to cloud:', error);
+              // Don't throw - cloud save is optional
+            }
+          }, 200);
         } catch (error) {
           console.error('Failed to generate flow:', error);
           throw error;
@@ -345,6 +362,45 @@ export const useFlowStore = create<FlowState>()(
     }),
     {
       name: 'flow-storage',
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            return str ? JSON.parse(str) : null;
+          } catch (error) {
+            console.error('Failed to load from localStorage:', error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            // Try to save to localStorage
+            localStorage.setItem(name, JSON.stringify(value));
+          } catch (error) {
+            console.error('localStorage quota exceeded:', error);
+            
+            // Clear old data if quota exceeded
+            if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+              try {
+                // Remove oldest history items
+                const state = value.state;
+                if (state.history && state.history.length > 5) {
+                  state.history = state.history.slice(-5);
+                  state.currentHistoryIndex = Math.min(state.currentHistoryIndex, 4);
+                }
+                // Try again with reduced data
+                localStorage.setItem(name, JSON.stringify(value));
+              } catch (retryError) {
+                console.error('Failed to save even after cleanup:', retryError);
+                // Continue without throwing - app should still work
+              }
+            }
+          }
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+        },
+      },
     }
   )
 );
