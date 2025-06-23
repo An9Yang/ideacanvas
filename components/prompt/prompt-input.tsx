@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useFlowStore } from '@/lib/stores/flow-store';
-import { toast } from 'sonner';
+import { useI18nToast } from '@/hooks/use-i18n-toast';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export function PromptInput() {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { generateFlow } = useFlowStore();
+  const { t } = useTranslation();
+  const toast = useI18nToast();
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -17,10 +20,10 @@ export function PromptInput() {
     setIsGenerating(true);
     try {
       await generateFlow(prompt);
-      toast.success('流程图生成成功');
+      toast.success('generateSuccess');
     } catch (error) {
       console.error('Failed to generate flow:', error);
-      toast.error('生成流程图失败，请重试');
+      toast.error('generateError');
     } finally {
       setIsGenerating(false);
     }
@@ -29,7 +32,7 @@ export function PromptInput() {
   return (
     <div className="space-y-4">
       <Textarea
-        placeholder="请输入您的需求描述，例如：“我需要一个电商网站”"
+        placeholder={t('inputPlaceholder')}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         className="min-h-[100px] resize-none focus:ring-2 focus:ring-primary"
@@ -40,7 +43,7 @@ export function PromptInput() {
           onClick={() => setPrompt('')}
           disabled={isGenerating || !prompt.trim()}
         >
-          清空
+          {t('clearButton')}
         </Button>
         <Button 
           onClick={handleGenerate}
@@ -50,10 +53,10 @@ export function PromptInput() {
           {isGenerating ? (
             <>
               <span className="animate-spin mr-2">⚙</span>
-              生成中...
+              {t('generating')}
             </>
           ) : (
-            '生成流程图'
+            t('generateButton')
           )}
         </Button>
       </div>

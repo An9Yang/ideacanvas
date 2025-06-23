@@ -1,97 +1,236 @@
 import { NextResponse } from 'next/server';
-import { NodeType, GeneratedNode, GeneratedEdge, GeneratedFlow } from '@/lib/types/flow';
+import { GeneratedFlow } from '@/lib/types/flow';
 import { azureOpenAI } from '@/lib/config/azure-openai';
+import { configService } from '@/lib/config';
+import { errorService, ErrorCode } from '@/lib/services/error-service';
+import {
+  detectLanguage,
+  validateNodeContent,
+  validateRequestBody
+} from '@/lib/utils/api-validators';
+import {
+  generateSystemPrompt,
+  generateRetryPrompt,
+  cleanAIResponse
+} from '@/lib/utils/prompt-generator';
 import { handleAPIError, sanitizeJSON, validateJSON } from '@/lib/utils/error-handler';
-import { FLOW_GENERATION_PROMPT } from '@/lib/prompts/flow-generation';
 
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const preferredRegion = 'auto';
 
+/**
+ * Generate flow from AI response
+ */
+async function generateFlowWithAI(
+  prompt: string,
+  systemPrompt: string,
+  isRetry: boolean = false
+): Promise<string> {
+  const generationParams = configService.getGenerationParams();
+  
+  const client = azureOpenAI.getClient();
+  const azureConfig = configService.getAzureConfig();
+  const completion = await client.chat.completions.create({
+    model: azureConfig.deploymentName,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt }
+    ],
+    temperature: generationParams.temperature,
+    max_completion_tokens: generationParams.maxTokens,
+    // 移除response_format参数，让AI自然返回JSON
+  });
+  
+  const content = completion.choices[0]?.message?.content;
+  
+  if (!content) {
+    throw errorService.createError(
+      ErrorCode.AI_INVALID_RESPONSE,
+      'AI没有返回有效内容'
+    );
+  }
+  
+  return content;
+}
+
+/**
+ * Validate and process flow data
+ */
+function validateFlowData(flowData: any): GeneratedFlow {
+  // Validate structure
+  if (!flowData.nodes || !Array.isArray(flowData.nodes)) {
+    throw errorService.createError(
+      ErrorCode.FLOW_INVALID_FORMAT,
+      '响应格式错误：缺少nodes数组'
+    );
+  }
+  
+  if (!flowData.edges || !Array.isArray(flowData.edges)) {
+    throw errorService.createError(
+      ErrorCode.FLOW_INVALID_FORMAT,
+      '响应格式错误：缺少edges数组'
+    );
+  }
+  
+  // Transform nodes from o3 format to our format
+  const transformedNodes: GeneratedNode[] = flowData.nodes.map((node: any) => {
+    // Handle o3 format where title is in data.label
+    if (node.data && node.data.label && node.data.content) {
+      return {
+        id: node.id,
+        type: node.type,
+        title: node.data.label,
+        content: node.data.content,
+        position: node.position
+      };
+    }
+    // Handle standard format
+    return {
+      id: node.id,
+      type: node.type,
+      title: node.title || node.data?.label || '',
+      content: node.content || node.data?.content || '',
+      position: node.position
+    };
+  });
+  
+  // Transform edges
+  const transformedEdges: GeneratedEdge[] = flowData.edges.map((edge: any) => {
+    return {
+      source: edge.source,
+      target: edge.target,
+      description: edge.label || edge.description || ''
+    };
+  });
+  
+  // Validate transformed nodes
+  const validationErrors: string[] = [];
+  
+  for (const node of transformedNodes) {
+    const validation = validateNodeContent(node);
+    if (!validation.isValid) {
+      validationErrors.push(validation.error!);
+    }
+  }
+  
+  if (validationErrors.length > 0) {
+    console.error('Validation errors:', validationErrors);
+    console.error('Transformed nodes:', JSON.stringify(transformedNodes, null, 2));
+    throw errorService.createError(
+      ErrorCode.FLOW_VALIDATION_FAILED,
+      '节点验证失败',
+      { errors: validationErrors }
+    );
+  }
+  
+  return {
+    nodes: transformedNodes,
+    edges: transformedEdges
+  } as GeneratedFlow;
+}
+
+/**
+ * POST /api/generate-flow
+ * Generate a flow diagram from user prompt
+ */
 export async function POST(request: Request) {
   try {
-    // 验证配置和请求
-    const validation = azureOpenAI.validateConfig();
+    // Step 1: Validate request
+    const body = await request.json();
+    const validation = validateRequestBody(body);
+    
     if (!validation.isValid) {
-      throw new Error(`Azure OpenAI configuration validation failed: ${validation.errors.join(', ')}`);
-    }
-
-    const body = await request.json().catch((error) => {
-      console.error('Error parsing request body:', error);
-      throw new Error('Invalid request body format');
-    });
-
-    if (!body?.prompt) {
       return NextResponse.json(
-        { error: 'Missing prompt in request body' },
+        { error: validation.error },
         { status: 400 }
       );
     }
-
-    // 生成流程图数据
-    const client = azureOpenAI.getClient();
-    const config = azureOpenAI.getConfig();
     
-    console.log('Generating flow for prompt:', body.prompt);
-    console.log('Using deployment:', config.deploymentName);
+    const prompt = validation.prompt!;
     
-    const response = await client.chat.completions.create({
-      model: config.deploymentName,
-      messages: [
-        { role: 'system', content: FLOW_GENERATION_PROMPT },
-        { role: 'user', content: body.prompt }
-      ],
-      max_completion_tokens: 100000  // 增加总 token 限制
-    });
-
-    console.log('Raw AI response:', response);
+    // Step 2: Detect language
+    const userLanguage = detectLanguage(prompt);
+    const systemPrompt = generateSystemPrompt(userLanguage);
     
-    if (!response.choices?.[0]?.message?.content) {
-      console.error('Invalid response structure:', response);
-      throw new Error('Invalid or empty AI response');
-    }
-
-    // 处理 AI 响应
-    console.log('Raw AI response content:', response.choices[0].message.content);
+    // Step 3: Generate flow (with retry logic)
+    let flowData: GeneratedFlow | null = null;
+    let lastError: string | null = null;
     
-    const trimmedContent = response.choices[0].message.content.trim();
-    console.log('Trimmed content:', trimmedContent);
-    
-    const cleanedContent = sanitizeJSON(trimmedContent);
-    console.log('Cleaned content:', cleanedContent);
-    
-    const { isValid, error } = validateJSON(cleanedContent);
-    if (!isValid) {
-      console.error('JSON validation error:', error);
-      console.error('Content that failed validation:', cleanedContent);
-      throw new Error(`JSON validation failed: ${error}`);
-    }
-
-    const flowData: GeneratedFlow = JSON.parse(cleanedContent);
-
-    // 格式化数据
-    const formattedData = {
-      nodes: flowData.nodes.map(node => ({
-        type: node.type as NodeType,
-        title: node.title,
-        content: typeof node.content === 'object' ? JSON.stringify(node.content) : node.content,
-        position: {
-          x: Math.round(node.position.x),
-          y: Math.round(node.position.y)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        // Generate prompt
+        const finalPrompt = attempt === 0 
+          ? prompt 
+          : generateRetryPrompt(prompt, lastError!, userLanguage);
+        
+        // Call AI
+        const aiResponse = await generateFlowWithAI(
+          finalPrompt,
+          systemPrompt,
+          attempt > 0
+        );
+        
+        // Log raw response for debugging
+        console.log('Raw AI response:', aiResponse);
+        
+        // Clean and parse response
+        const cleanedContent = cleanAIResponse(aiResponse);
+        console.log('Cleaned content:', cleanedContent);
+        
+        const sanitizedContent = sanitizeJSON(cleanedContent);
+        console.log('Sanitized content:', sanitizedContent);
+        
+        const parsedData = validateJSON(sanitizedContent);
+        console.log('Parsed data:', parsedData);
+        
+        // Validate flow data
+        flowData = validateFlowData(parsedData);
+        break; // Success, exit retry loop
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : '未知错误';
+        console.error(`Attempt ${attempt + 1} failed:`, error);
+        
+        if (attempt === 1) {
+          // Final attempt failed
+          throw error;
         }
-      })),
-      edges: flowData.edges.map(edge => ({
-        source: edge.source,
-        target: edge.target,
-        description: edge.description
-      }))
-    };
-
-    console.log('Successfully generated flow data');
-    return NextResponse.json(formattedData);
-
+      }
+    }
+    
+    if (!flowData) {
+      throw errorService.createError(
+        ErrorCode.FLOW_GENERATION_FAILED,
+        '生成流程失败'
+      );
+    }
+    
+    // Step 4: Return response
+    return NextResponse.json({
+      ...flowData,
+      userLanguage
+    });
+    
   } catch (error) {
-    const { error: errorMessage, details, statusCode } = handleAPIError(error);
-    return NextResponse.json({ error: errorMessage, details }, { status: statusCode });
+    console.error('Flow generation error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    // Handle different error types
+    if (error && typeof error === 'object' && 'code' in error) {
+      const appError = error as any;
+      return NextResponse.json(
+        {
+          error: appError.message,
+          code: appError.code,
+          details: appError.details
+        },
+        { status: appError.statusCode || 500 }
+      );
+    }
+    
+    // Generic error handling
+    return handleAPIError(error);
   }
 }

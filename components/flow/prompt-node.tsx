@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { formatText } from '@/lib/utils/text-formatter';
+// PDF store 已移除
 
 interface PromptNodeProps {
   id: string;

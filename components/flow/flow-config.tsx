@@ -1,10 +1,18 @@
 import { NodeTypes, MarkerType, ConnectionMode, ReactFlowProps } from 'reactflow';
-import { FlowNode } from './flow-node';
+import { 
+  ProductNode,
+  ExternalNode,
+  ContextNode,
+  GuideNode,
+  DocumentNode
+} from './flow-node-wrapper';
 
 export const NODE_TYPES: NodeTypes = {
-  product: FlowNode,
-  external: FlowNode,
-  context: FlowNode,
+  product: ProductNode,
+  external: ExternalNode,
+  context: ContextNode,
+  guide: GuideNode,
+  document: DocumentNode,
 };
 
 export const EDGE_OPTIONS = {

@@ -7,17 +7,37 @@ async function testAzureOpenAI() {
     console.log('环境变量：', {
       endpoint: process.env.AZURE_OPENAI_ENDPOINT,
       deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
-      apiVersion: '2024-02-15-preview',
+      apiVersion: process.env.AZURE_OPENAI_API_VERSION,
       hasApiKey: !!process.env.AZURE_OPENAI_API_KEY
     });
 
+    // 修正环境变量
+    // 如果端点包含完整路径（包括/openai/deployments/...），则提取基本URL
+    let endpoint = process.env.AZURE_OPENAI_ENDPOINT || '';
+    if (endpoint.includes('/openai/deployments/')) {
+      endpoint = endpoint.split('/openai/deployments/')[0];
+    }
+    
+    // 如果API版本末尾有分号，则移除
+    let apiVersion = process.env.AZURE_OPENAI_API_VERSION || '';
+    if (apiVersion.endsWith(';')) {
+      apiVersion = apiVersion.slice(0, -1);
+    }
+    
     // 初始化客户端
-    const client = new AzureOpenAI({
+    const clientOptions = {
       apiKey: process.env.AZURE_OPENAI_API_KEY,
-      endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+      endpoint: endpoint,
       deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
-      apiVersion: '2024-02-15-preview'
+      apiVersion: apiVersion
+    };
+    
+    console.log('修正后的客户端配置：', {
+      ...clientOptions,
+      apiKey: clientOptions.apiKey ? '已设置' : '未设置'
     });
+    
+    const client = new AzureOpenAI(clientOptions);
 
     // 测试简单的补全请求
     console.log('发送测试请求...');

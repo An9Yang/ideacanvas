@@ -1,8 +1,16 @@
 import { NodeTypes } from 'reactflow';
-import { FlowNode } from './flow-node';
+import { 
+  ProductNode,
+  ExternalNode,
+  ContextNode,
+  GuideNode,
+  DocumentNode
+} from './flow-node-wrapper';
 
 export const createNodeTypes = (): NodeTypes => ({
-  product: FlowNode,
-  external: FlowNode,
-  context: FlowNode,
+  product: ProductNode,
+  external: ExternalNode,
+  context: ContextNode,
+  guide: GuideNode,
+  document: DocumentNode,
 }); 

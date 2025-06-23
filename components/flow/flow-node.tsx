@@ -1,13 +1,14 @@
 "use client";
 
-import { memo, useState } from 'react';
-import { Handle, Position } from 'reactflow';
+import { memo } from 'react';
+import { Handle, Position, NodeProps } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronRight, RefreshCw } from 'lucide-react';
 import { NodeType } from '@/lib/types/flow';
 import { NodeDetails } from './node-details';
-import { NodeProps } from 'reactflow';
+import { useFlowNode } from '@/hooks/use-flow-node';
+import { getNodeStyle } from '@/lib/utils/node-styles';
 
 interface FlowNodeData {
   title: string;
@@ -22,33 +23,38 @@ interface FlowNodeProps extends NodeProps<FlowNodeData> {
   type: NodeType;
 }
 
-const getNodeStyle = (type: NodeType) => {
-  switch (type) {
-    case 'external':
-      return 'border-blue-500 bg-blue-50 dark:bg-blue-950';
-    case 'context':
-      return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950';
-    default:
-      return 'border-white bg-background';
-  }
-};
-
-const getContentSummary = (content: string) => {
-  // 获取第一个部分（页面描述）的内容
-  const firstSection = content.split('2.')[0];
-  const description = firstSection
-    .split('\n')
-    .filter(line => line.trim() && !line.startsWith('1.'))
-    .map(line => line.trim())
-    .join(' ');
-  return description || '点击查看详情';
-};
-
-const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNodeProps) => {
-  const [showDetails, setShowDetails] = useState(false);
+/**
+ * Flow node component - optimized version
+ * Business logic is separated into useFlowNode hook
+ */
+export const FlowNode = memo(({ 
+  id, 
+  data, 
+  type, 
+  selected, 
+  isConnectable 
+}: FlowNodeProps) => {
+  const { title, content, updateNodeContent } = data;
+  
+  // Use custom hook for business logic
+  const {
+    showDetails,
+    setShowDetails,
+    isGenerating,
+    translatedTitle,
+    summary,
+    generateDocumentNode,
+    t
+  } = useFlowNode({
+    id,
+    type,
+    title,
+    content,
+    updateNodeContent
+  });
+  
+  // Get node styling
   const nodeStyle = getNodeStyle(type);
-  const { title, content, results, isProcessing, error } = data;
-  const summary = getContentSummary(content);
   
   return (
     <>
@@ -58,7 +64,7 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
             selected ? 'ring-2 ring-primary' : ''
           }`}
         >
-          {/* 左侧输入点 */}
+          {/* Connection handles */}
           <Handle
             type="target"
             position={Position.Left}
@@ -68,7 +74,6 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
             style={{ left: -6 }}
           />
           
-          {/* 右侧输出点 */}
           <Handle
             type="source"
             position={Position.Right}
@@ -78,49 +83,55 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
             style={{ right: -6 }}
           />
           
+          {/* Node content */}
           <div className="space-y-2">
-            <h3 className="font-semibold text-lg">{title}</h3>
+            <h3 className="font-semibold text-lg">{translatedTitle}</h3>
             <p className="text-sm text-muted-foreground line-clamp-3">{summary}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full mt-2"
-              onClick={() => setShowDetails(true)}
-            >
-              查看详情
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
             
-            {isProcessing && (
-              <div className="flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            {/* Actions */}
+            {type === 'document' ? (
+              <DocumentNodeActions
+                onViewDetails={() => setShowDetails(true)}
+                onRegenerate={generateDocumentNode}
+                isGenerating={isGenerating}
+                t={(key: string) => t(key as any)}
+              />
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => setShowDetails(true)}
+              >
+                {t('viewDetails')}
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
+            
+            {/* Error state */}
+            {data.error && (
+              <div className="text-sm text-destructive mt-2">
+                {data.error}
               </div>
             )}
             
-            {error && (
-              <div className="p-2 bg-destructive/20 rounded-md">
-                <p className="text-sm text-destructive">{error}</p>
+            {/* Processing state */}
+            {data.isProcessing && (
+              <div className="flex items-center justify-center mt-2">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <span className="text-sm text-muted-foreground">
+                  {t('processing' as any)}
+                </span>
               </div>
             )}
           </div>
         </Card>
-
-        {results && results.length > 0 && (
-          <div className="absolute left-[320px] top-0 space-y-4">
-            {results.map((result, index) => (
-              <Card key={index} className="p-4 bg-background/95 backdrop-blur shadow-lg w-[300px]">
-                <div className="prose prose-sm dark:prose-invert">
-                  {result.result}
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
-
+      
+      {/* Details dialog */}
       {showDetails && (
         <NodeDetails
-          title={title}
+          title={translatedTitle}
           content={content}
           type={type}
           onClose={() => setShowDetails(false)}
@@ -128,8 +139,50 @@ const FlowNodeComponent = ({ id, type, data, isConnectable, selected }: FlowNode
       )}
     </>
   );
-};
-
-export const FlowNode = memo(FlowNodeComponent) as unknown as React.ComponentType<NodeProps>;
+});
 
 FlowNode.displayName = 'FlowNode';
+
+/**
+ * Document node specific actions
+ */
+const DocumentNodeActions = memo(({ 
+  onViewDetails, 
+  onRegenerate, 
+  isGenerating, 
+  t 
+}: {
+  onViewDetails: () => void;
+  onRegenerate: () => void;
+  isGenerating: boolean;
+  t: (key: string) => string;
+}) => {
+  return (
+    <div className="flex justify-between gap-2 mt-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="flex-1"
+        onClick={onViewDetails}
+      >
+        {t('viewDetails')}
+        <ChevronRight className="w-4 h-4 ml-1" />
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex-none"
+        onClick={onRegenerate}
+        disabled={isGenerating}
+      >
+        {isGenerating ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <RefreshCw className="w-4 h-4" />
+        )}
+      </Button>
+    </div>
+  );
+});
+
+DocumentNodeActions.displayName = 'DocumentNodeActions';

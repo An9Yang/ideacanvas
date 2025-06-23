@@ -4,34 +4,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { MarkerType } from 'reactflow';
 import type { FlowState, Flow, Node, Edge, NodeResult, NodeType, HistoryState } from '@/lib/types/flow';
 import { generateFlowFromPrompt } from '@/lib/services/azure-ai';
+import { APP_CONFIG } from '@/lib/config';
+import { flowGenerationService } from '@/lib/services/flow-generation.service';
+import { cleanNodeData, addToHistory, createHistoryState } from '@/lib/utils/history.utils';
 
-const MAX_HISTORY = 10; // 减少历史记录数量限制
-
-// 优化清理历史记录函数
-const cleanHistory = (history: HistoryState[], currentIndex: number) => {
-  // 如果历史记录超过限制，只保留最近的记录
-  if (history.length > MAX_HISTORY) {
-    const start = Math.max(0, history.length - MAX_HISTORY);
-    return history.slice(start);
-  }
-  return history;
-};
-
-// 优化节点数据清理函数
-const cleanNodeData = (nodes: Node[]) => 
-  nodes.map(({ id, type, position, data }) => ({
-    id,
-    type,
-    position: {
-      x: Math.round(position.x * 100) / 100, // 只保留两位小数
-      y: Math.round(position.y * 100) / 100
-    },
-    data: {
-      title: data.title,
-      content: data.content?.slice(0, 1000) // 限制内容长度
-    },
-    draggable: true
-  }));
+// History utilities are now imported from history.utils.ts
 
 export const useFlowStore = create<FlowState>()(
   persist(
@@ -66,9 +43,10 @@ export const useFlowStore = create<FlowState>()(
           timestamp: Date.now(),
         };
 
-        const newHistoryList = cleanHistory(
-          [...history.slice(0, currentHistoryIndex + 1), newHistory],
-          currentHistoryIndex + 1
+        const { history: newHistoryList } = addToHistory(
+          history,
+          currentHistoryIndex,
+          newHistory
         );
 
         set({
@@ -118,69 +96,46 @@ export const useFlowStore = create<FlowState>()(
         set({ nodes: updatedNodes });
       },
 
-
       generateFlow: async (prompt: string) => {
         try {
+          // Step 1: Generate flow from AI
           const flowData = await generateFlowFromPrompt(prompt);
           
-          // 生成节点ID的映射
-          const idMap = new Map();
-          flowData.nodes.forEach((node) => {
-            idMap.set(node.title, uuidv4());
-          });
-
-          // 创建新节点，使用映射的ID
-          const nodes = flowData.nodes.map((node) => ({
-            id: idMap.get(node.title),
-            type: node.type,
-            position: node.position,
-            data: {
-              title: node.title,
-              content: node.content,
-            },
-            draggable: true,
-          }));
-
-          // 创建新边，使用映射的ID
-          const edges = flowData.edges.map((edge) => ({
-            id: uuidv4(),
-            source: idMap.get(edge.source),
-            target: idMap.get(edge.target),
-            type: 'default',
-            animated: true,
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              width: 20,
-              height: 20,
-              color: '#666666',
-            },
-            style: {
-              strokeWidth: 2,
-              stroke: '#666666',
-            },
-          }));
-
-          // 创建新的历史记录
+          // Step 2: Process flow data using service
+          const { nodes, edges, documentNode, documentEdges } = 
+            flowGenerationService.processFlowData(flowData);
+          
+          // Step 3: Combine all nodes and edges
+          const allNodes = [...nodes, documentNode];
+          const allEdges = [...edges, ...documentEdges];
+          
+          // Step 4: Update history
           const { history = [], currentHistoryIndex = -1 } = get();
-          const newHistory = {
-            nodes: cleanNodeData(nodes),
-            edges,
-            timestamp: Date.now(),
-          };
-
-          const newHistoryList = cleanHistory(
-            [...history.slice(0, currentHistoryIndex + 1), newHistory],
-            currentHistoryIndex + 1
+          const newHistoryState = createHistoryState(allNodes, allEdges);
+          const { history: newHistory, index: newIndex } = addToHistory(
+            history,
+            currentHistoryIndex,
+            newHistoryState
           );
-
-          // 更新状态
-          const cleanedNodes = cleanNodeData(nodes);
+          
+          // Step 5: Update store state
           set({
-            nodes: cleanedNodes,
-            edges,
-            history: newHistoryList,
-            currentHistoryIndex: newHistoryList.length - 1,
+            nodes: cleanNodeData(allNodes),
+            edges: allEdges,
+            history: newHistory,
+            currentHistoryIndex: newIndex,
           });
+          
+          // Step 6: Generate document content asynchronously
+          setTimeout(async () => {
+            try {
+              const documentContent = flowGenerationService.generateDocumentContent(nodes, edges);
+              get().updateNodeContent(documentNode.id, documentContent);
+            } catch (error) {
+              console.error('生成文档内容失败:', error);
+              get().updateNodeContent(documentNode.id, '文档生成失败');
+            }
+          }, 100);
         } catch (error) {
           console.error('Failed to generate flow:', error);
           throw error;
@@ -262,9 +217,10 @@ export const useFlowStore = create<FlowState>()(
           timestamp: Date.now(),
         };
 
-        const newHistoryList = cleanHistory(
-          [...history.slice(0, currentHistoryIndex + 1), newHistory],
-          currentHistoryIndex + 1
+        const { history: newHistoryList } = addToHistory(
+          history,
+          currentHistoryIndex,
+          newHistory
         );
 
         set({
@@ -282,9 +238,10 @@ export const useFlowStore = create<FlowState>()(
           timestamp: Date.now(),
         };
 
-        const newHistoryList = cleanHistory(
-          [...history.slice(0, currentHistoryIndex + 1), newHistory],
-          currentHistoryIndex + 1
+        const { history: newHistoryList } = addToHistory(
+          history,
+          currentHistoryIndex,
+          newHistory
         );
 
         set({
@@ -305,9 +262,10 @@ export const useFlowStore = create<FlowState>()(
           timestamp: Date.now(),
         };
 
-        const newHistoryList = cleanHistory(
-          [...history.slice(0, currentHistoryIndex + 1), newHistory],
-          currentHistoryIndex + 1
+        const { history: newHistoryList } = addToHistory(
+          history,
+          currentHistoryIndex,
+          newHistory
         );
 
         set({

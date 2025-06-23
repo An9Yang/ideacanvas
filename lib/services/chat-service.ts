@@ -1,58 +1,29 @@
-import OpenAI from 'openai';
-import { config } from '../config';
-
-let openaiClient: OpenAI | null = null;
-
-function getOpenAIClient() {
-  if (!openaiClient) {
-    if (!config.openai.apiKey) {
-      throw new Error('OpenAI API key is missing');
-    }
-    openaiClient = new OpenAI({
-      apiKey: config.openai.apiKey,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-  return openaiClient;
-}
+import { aiClient } from './ai-client';
+import { configService, AI_CONFIG } from '@/lib/config';
 
 export async function createAssistant() {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
+  const assistantConfig = configService.getAssistantConfig();
+  const azureConfig = configService.getAzureConfig();
+  
   return await client.beta.assistants.create({
-    name: "PDF Analysis Assistant",
-    instructions: "You are an expert assistant that helps users analyze and understand PDF documents. Use the provided documents to answer questions accurately and cite your sources. Please provide answers in a clear format without citation markers like [4:0 source]",
-    model: "gpt-4o",
-    tools: [{ type: "file_search" }],
+    name: assistantConfig.NAME,
+    instructions: assistantConfig.INSTRUCTIONS,
+    model: azureConfig.deploymentName,
+    tools: [],
   });
 }
 
 export async function createThread() {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
   return await client.beta.threads.create();
 }
 
-export async function uploadPDFAndAttachToThread(file: File, threadId: string) {
-  const client = getOpenAIClient();
-
-  // Upload the file to OpenAI
-  const uploadedFile = await client.files.create({
-    file,
-    purpose: "assistants"
-  });
-
-  // Create a message with the file attachment
-  await client.beta.threads.messages.create(threadId, {
-    role: "user",
-    content: "I've uploaded a PDF document for analysis. Please confirm you can access it.",
-    // @ts-ignore - OpenAI API supports file_ids but type definition is outdated
-    file_ids: [uploadedFile.id]
-  });
-
-  return uploadedFile;
-}
+// PDF 相关功能已移除
+// export async function uploadPDFAndAttachToThread(file: File, threadId: string) { ... }
 
 export async function sendMessage(threadId: string, assistantId: string, content: string) {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
 
   // Add the user's message to the thread
   await client.beta.threads.messages.create(threadId, {
@@ -68,8 +39,10 @@ export async function sendMessage(threadId: string, assistantId: string, content
   // Poll for the run completion
   let runStatus = await client.beta.threads.runs.retrieve(threadId, run.id);
   
+  const assistantConfig = configService.getAssistantConfig();
+  
   while (runStatus.status === "queued" || runStatus.status === "in_progress") {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, assistantConfig.POLLING_INTERVAL));
     runStatus = await client.beta.threads.runs.retrieve(threadId, run.id);
   }
 
@@ -83,7 +56,7 @@ export async function sendMessage(threadId: string, assistantId: string, content
 }
 
 export async function getMessages(threadId: string) {
-  const client = getOpenAIClient();
+  const client = aiClient.getClient();
   const messages = await client.beta.threads.messages.list(threadId);
   return messages.data;
 }
