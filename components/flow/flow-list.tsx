@@ -4,10 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { CloudFlow } from '@/lib/services/cloud-storage.service';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Download, Calendar, FileJson } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Trash2, Download, Calendar, FileJson, Edit2, Check, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
+import { cloudStorageService } from '@/lib/services/cloud-storage.service';
 
 interface FlowListProps {
   onLoadFlow: (flow: CloudFlow) => void;
@@ -17,6 +19,8 @@ interface FlowListProps {
 export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
   const [flows, setFlows] = useState<CloudFlow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const { toast } = useToast();
   const locale = language === 'zh' ? zhCN : enUS;
 
@@ -83,6 +87,40 @@ export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
     }
   };
 
+  const startEditing = (flow: CloudFlow) => {
+    setEditingId(flow.id);
+    setEditingName(flow.name);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const saveRename = async (flowId: string) => {
+    if (!editingName.trim()) {
+      cancelEditing();
+      return;
+    }
+
+    try {
+      await cloudStorageService.updateFlow(flowId, { name: editingName.trim() });
+      toast({
+        title: language === 'zh' ? '重命名成功' : 'Rename Successful',
+        description: language === 'zh' ? '流程图名称已更新' : 'Flow name has been updated',
+      });
+      fetchFlows();
+      cancelEditing();
+    } catch (error) {
+      console.error('Failed to rename flow:', error);
+      toast({
+        title: language === 'zh' ? '重命名失败' : 'Rename Failed',
+        description: language === 'zh' ? '无法更新流程图名称' : 'Failed to update flow name',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -113,7 +151,48 @@ export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
         <Card key={flow.id} className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg mb-1">{flow.name}</h3>
+              {editingId === flow.id ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <Input
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveRename(flow.id);
+                      if (e.key === 'Escape') cancelEditing();
+                    }}
+                    className="h-8 text-lg font-semibold"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => saveRename(flow.id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Check className="w-4 h-4 text-green-600" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={cancelEditing}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="w-4 h-4 text-red-600" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg">{flow.name}</h3>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => startEditing(flow)}
+                    className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
@@ -134,6 +213,7 @@ export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
                 variant="outline"
                 onClick={() => onLoadFlow(flow)}
                 className="flex items-center gap-1"
+                disabled={editingId === flow.id}
               >
                 <Download className="w-4 h-4" />
                 {language === 'zh' ? '加载' : 'Load'}
@@ -143,6 +223,7 @@ export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
                 variant="outline"
                 onClick={() => handleDelete(flow.id)}
                 className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                disabled={editingId === flow.id}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>

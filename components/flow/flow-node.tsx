@@ -34,7 +34,9 @@ export const FlowNode = memo(({
   selected, 
   isConnectable 
 }: FlowNodeProps) => {
-  const { title, content, updateNodeContent } = data;
+  // Provide default values if data is undefined
+  const safeData = data || { title: 'Untitled', content: '', updateNodeContent: () => {} };
+  const { title = 'Untitled', content = '', updateNodeContent = () => {} } = safeData;
   
   // Use custom hook for business logic
   const {

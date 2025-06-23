@@ -326,8 +326,31 @@ export const useFlowStore = create<FlowState>()(
       
       loadCloudFlow: (cloudFlow: any) => {
         // Load flow from cloud storage
+        // Ensure nodes have proper data structure
+        const nodes = (cloudFlow.nodes || []).map((node: any) => {
+          // If node doesn't have data property, create it from title/content
+          if (!node.data) {
+            return {
+              ...node,
+              data: {
+                title: node.title || 'Untitled',
+                content: node.content || '',
+                updateNodeContent: get().updateNodeContent,
+              }
+            };
+          }
+          // If data exists but missing updateNodeContent
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              updateNodeContent: get().updateNodeContent,
+            }
+          };
+        });
+        
         set({
-          nodes: cloudFlow.nodes || [],
+          nodes,
           edges: cloudFlow.edges || [],
           history: [],
           currentHistoryIndex: -1,
@@ -376,7 +399,21 @@ export const useFlowStore = create<FlowState>()(
         getItem: (name) => {
           try {
             const str = localStorage.getItem(name);
-            return str ? JSON.parse(str) : null;
+            if (!str) return null;
+            
+            const parsed = JSON.parse(str);
+            // Ensure nodes have proper data structure when loading
+            if (parsed?.state?.nodes) {
+              parsed.state.nodes = parsed.state.nodes.map((node: any) => ({
+                ...node,
+                data: node.data || {
+                  title: node.title || 'Untitled',
+                  content: node.content || '',
+                }
+              }));
+            }
+            
+            return parsed;
           } catch (error) {
             console.error('Failed to load from localStorage:', error);
             return null;
@@ -384,25 +421,45 @@ export const useFlowStore = create<FlowState>()(
         },
         setItem: (name, value) => {
           try {
-            // Try to save to localStorage
-            localStorage.setItem(name, JSON.stringify(value));
+            // Only store essential data to minimize storage usage
+            const minimalState = {
+              ...value,
+              state: {
+                ...value.state,
+                // Don't store flows array (redundant with cloud storage)
+                flows: [],
+                // Limit history to last 3 items
+                history: (value.state.history || []).slice(-3),
+                // Store minimal node data
+                nodes: (value.state.nodes || []).map((node: any) => ({
+                  id: node.id,
+                  type: node.type,
+                  position: node.position,
+                  // Store minimal data to ensure structure consistency
+                  data: {
+                    title: node.data?.title || '',
+                    content: node.data?.content || '',
+                  }
+                })),
+                edges: (value.state.edges || []).map((edge: any) => ({
+                  id: edge.id,
+                  source: edge.source,
+                  target: edge.target,
+                })),
+              }
+            };
+            
+            localStorage.setItem(name, JSON.stringify(minimalState));
           } catch (error) {
             console.error('localStorage quota exceeded:', error);
             
-            // Clear old data if quota exceeded
+            // If still failing, clear localStorage and continue
             if (error instanceof DOMException && error.name === 'QuotaExceededError') {
               try {
-                // Remove oldest history items
-                const state = value.state;
-                if (state.history && state.history.length > 5) {
-                  state.history = state.history.slice(-5);
-                  state.currentHistoryIndex = Math.min(state.currentHistoryIndex, 4);
-                }
-                // Try again with reduced data
-                localStorage.setItem(name, JSON.stringify(value));
-              } catch (retryError) {
-                console.error('Failed to save even after cleanup:', retryError);
-                // Continue without throwing - app should still work
+                localStorage.clear();
+                console.log('Cleared localStorage due to quota exceeded');
+              } catch (clearError) {
+                console.error('Failed to clear localStorage:', clearError);
               }
             }
           }
