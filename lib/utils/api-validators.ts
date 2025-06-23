@@ -66,12 +66,13 @@ export function validateNodeContent(node: GeneratedNode): {
       'Firestore', 'Cloud Functions', 'Maps API',
       'Blob Storage', 'Cognitive Services',
       'Braintree', 'MySQL', 'ChatGPT', 'GPT-4', 'Gemini',
-      'OAuth', 'JWT'
+      'OAuth', 'JWT', 'API', 'SDK', 'REST', 'GraphQL',
+      'Provider:', 'Service Provider:', 'Integration:'
     ];
     
     const allServices = [...COMMON_EXTERNAL_SERVICES, ...additionalServices];
     const hasSpecificService = allServices.some(service => 
-      node.content.includes(service)
+      node.content.toLowerCase().includes(service.toLowerCase())
     );
     
     if (!hasSpecificService) {
@@ -85,7 +86,7 @@ export function validateNodeContent(node: GeneratedNode): {
     if (node.content.length < validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH) {
       return {
         isValid: false,
-        error: `外部服务节点 "${node.title}" 的内容太短（最少需要${validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH}字符）`
+        error: `外部服务节点 "${node.title}" 的内容太短（最少需要${validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH}字符，当前${node.content.length}字符）`
       };
     }
   }

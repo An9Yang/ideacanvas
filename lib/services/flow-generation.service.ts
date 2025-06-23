@@ -42,7 +42,10 @@ export class FlowGenerationService {
   private createNodeIdMapping(nodes: GeneratedNode[]): Map<string, string> {
     const idMap = new Map<string, string>();
     nodes.forEach((node) => {
-      idMap.set(node.title, uuidv4());
+      const newId = uuidv4();
+      // Map both the original ID and title to the new ID
+      idMap.set(node.id, newId);
+      idMap.set(node.title, newId);
     });
     return idMap;
   }
@@ -67,23 +70,36 @@ export class FlowGenerationService {
    * Transform generated edges to processed edges
    */
   private transformEdges(generatedEdges: GeneratedEdge[], idMap: Map<string, string>): ProcessedEdge[] {
-    return generatedEdges.map((edge) => ({
-      id: uuidv4(),
-      source: idMap.get(edge.source)!,
-      target: idMap.get(edge.target)!,
-      type: 'default',
-      animated: true,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 20,
-        height: 20,
-        color: '#666666',
-      },
-      style: {
-        strokeWidth: 2,
-        stroke: '#666666',
-      },
-    }));
+    return generatedEdges
+      .map((edge) => {
+        const sourceId = idMap.get(edge.source);
+        const targetId = idMap.get(edge.target);
+        
+        // Skip edges if source or target not found
+        if (!sourceId || !targetId) {
+          console.warn(`Edge skipped: source="${edge.source}" target="${edge.target}" not found in ID map`);
+          return null;
+        }
+        
+        return {
+          id: uuidv4(),
+          source: sourceId,
+          target: targetId,
+          type: 'default',
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 20,
+            height: 20,
+            color: '#666666',
+          },
+          style: {
+            strokeWidth: 2,
+            stroke: '#666666',
+          },
+        };
+      })
+      .filter((edge): edge is ProcessedEdge => edge !== null);
   }
 
   /**
