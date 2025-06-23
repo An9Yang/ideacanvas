@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, Suspense, useEffect, useState } from 'react';
+import React, { useCallback, Suspense, useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Connection, Edge, NodeChange, applyNodeChanges, Node as ReactFlowNode } from 'reactflow';
 import { Node } from '@/lib/types/flow';
@@ -13,6 +13,7 @@ import { PromptNode } from './prompt-node';
 import { FlowToolbar } from './flow-toolbar';
 import { generateCompletion } from '@/lib/services/openai-service';
 import { useTranslation } from '@/hooks/useTranslation';
+import { debounce } from '@/lib/utils/debounce';
 
 // 动态导入所有 ReactFlow 组件
 const ReactFlowComponent = dynamic(
@@ -59,6 +60,7 @@ const ReactFlowComponent = dynamic(
 
 export function FlowCanvas() {
   const [isClient, setIsClient] = useState(false);
+  const [localNodes, setLocalNodes] = useState<Node[]>([]);
   const { t } = useTranslation();
   const toast = useI18nToast();
   
@@ -75,14 +77,29 @@ export function FlowCanvas() {
     removeEdge,
   } = useFlowStore();
 
+  // Sync store nodes to local state
+  useEffect(() => {
+    setLocalNodes(nodes);
+  }, [nodes]);
+
+  // Create debounced update function for store
+  const debouncedStoreUpdate = useMemo(
+    () => debounce((updatedNodes: Node[]) => {
+      updateNodes(updatedNodes);
+    }, 1000), // 1 second delay
+    [updateNodes]
+  );
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      requestAnimationFrame(() => {
-        const updatedNodes = applyNodeChanges(changes, nodes as ReactFlowNode[]);
-        updateNodes(updatedNodes as Node[]);
-      });
+      // Apply changes to local state immediately for smooth UI
+      const updatedNodes = applyNodeChanges(changes, localNodes as ReactFlowNode[]);
+      setLocalNodes(updatedNodes as Node[]);
+      
+      // Debounce the store update to reduce localStorage writes
+      debouncedStoreUpdate(updatedNodes as Node[]);
     },
-    [nodes, updateNodes]
+    [localNodes, debouncedStoreUpdate]
   );
 
   const onConnect = useCallback(
@@ -127,7 +144,7 @@ export function FlowCanvas() {
       <FlowToolbar />
       <Suspense fallback={<div>{t('loading')}</div>}>
         <ReactFlowComponent
-          nodes={nodes}
+          nodes={localNodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onNodesDelete={onNodesDelete}
@@ -140,7 +157,7 @@ export function FlowCanvas() {
         />
       </Suspense>
 
-      {nodes.length === 0 && (
+      {localNodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-background/50 backdrop-blur">
           <div className="text-center space-y-4 text-muted-foreground">
             <p className="text-lg font-medium">{t('canvasEmpty')}</p>

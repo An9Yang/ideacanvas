@@ -7,6 +7,7 @@ import { generateFlowFromPrompt } from '@/lib/services/azure-ai';
 import { APP_CONFIG } from '@/lib/config';
 import { flowGenerationService } from '@/lib/services/flow-generation.service';
 import { cleanNodeData, addToHistory, createHistoryState } from '@/lib/utils/history.utils';
+import { cloudStorageService } from '@/lib/services/cloud-storage.service';
 
 // History utilities are now imported from history.utils.ts
 
@@ -136,6 +137,22 @@ export const useFlowStore = create<FlowState>()(
               get().updateNodeContent(documentNode.id, '文档生成失败');
             }
           }, 100);
+          
+          // Step 7: Save to cloud storage (async, non-blocking)
+          setTimeout(async () => {
+            try {
+              const flowName = `Flow - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
+              await cloudStorageService.saveFlow({
+                name: flowName,
+                nodes: allNodes,
+                edges: allEdges,
+              });
+              console.log('Flow saved to cloud storage');
+            } catch (error) {
+              console.error('Failed to save flow to cloud:', error);
+              // Don't throw - cloud save is optional
+            }
+          }, 200);
         } catch (error) {
           console.error('Failed to generate flow:', error);
           throw error;
@@ -306,6 +323,39 @@ export const useFlowStore = create<FlowState>()(
           });
         }
       },
+      
+      loadCloudFlow: (cloudFlow: any) => {
+        // Load flow from cloud storage
+        // Ensure nodes have proper data structure
+        const nodes = (cloudFlow.nodes || []).map((node: any) => {
+          // If node doesn't have data property, create it from title/content
+          if (!node.data) {
+            return {
+              ...node,
+              data: {
+                title: node.title || 'Untitled',
+                content: node.content || '',
+                updateNodeContent: get().updateNodeContent,
+              }
+            };
+          }
+          // If data exists but missing updateNodeContent
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              updateNodeContent: get().updateNodeContent,
+            }
+          };
+        });
+        
+        set({
+          nodes,
+          edges: cloudFlow.edges || [],
+          history: [],
+          currentHistoryIndex: -1,
+        });
+      },
 
       deleteFlow: (id: string) => {
         set((state) => ({
@@ -345,6 +395,79 @@ export const useFlowStore = create<FlowState>()(
     }),
     {
       name: 'flow-storage',
+      storage: {
+        getItem: (name) => {
+          try {
+            const str = localStorage.getItem(name);
+            if (!str) return null;
+            
+            const parsed = JSON.parse(str);
+            // Ensure nodes have proper data structure when loading
+            if (parsed?.state?.nodes) {
+              parsed.state.nodes = parsed.state.nodes.map((node: any) => ({
+                ...node,
+                data: node.data || {
+                  title: node.title || 'Untitled',
+                  content: node.content || '',
+                }
+              }));
+            }
+            
+            return parsed;
+          } catch (error) {
+            console.error('Failed to load from localStorage:', error);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            // Only store essential data to minimize storage usage
+            const minimalState = {
+              ...value,
+              state: {
+                ...value.state,
+                // Don't store flows array (redundant with cloud storage)
+                flows: [],
+                // Limit history to last 3 items
+                history: (value.state.history || []).slice(-3),
+                // Store minimal node data
+                nodes: (value.state.nodes || []).map((node: any) => ({
+                  id: node.id,
+                  type: node.type,
+                  position: node.position,
+                  // Store minimal data to ensure structure consistency
+                  data: {
+                    title: node.data?.title || '',
+                    content: node.data?.content || '',
+                  }
+                })),
+                edges: (value.state.edges || []).map((edge: any) => ({
+                  id: edge.id,
+                  source: edge.source,
+                  target: edge.target,
+                })),
+              }
+            };
+            
+            localStorage.setItem(name, JSON.stringify(minimalState));
+          } catch (error) {
+            console.error('localStorage quota exceeded:', error);
+            
+            // If still failing, clear localStorage and continue
+            if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+              try {
+                localStorage.clear();
+                console.log('Cleared localStorage due to quota exceeded');
+              } catch (clearError) {
+                console.error('Failed to clear localStorage:', clearError);
+              }
+            }
+          }
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name);
+        },
+      },
     }
   )
 );
