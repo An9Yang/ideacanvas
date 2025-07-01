@@ -1,0 +1,145 @@
+{
+  "controlCharacters": {
+    "description": "测试各种控制字符的处理",
+    "cases": [
+      {
+        "name": "基本控制字符",
+        "prompt": "创建一个包含多行描述的用户管理系统",
+        "expectedContent": "用户注册功能:\n1. 邮箱验证\n2. 密码强度检查\n\t- 最少8位\n\t- 包含大小写\n3. 验证码功能"
+      },
+      {
+        "name": "混合控制字符",
+        "prompt": "设计一个包含复杂格式的报表系统",
+        "malformedResponse": "{\"nodes\":[{\"id\":\"node1\",\"data\":{\"label\":\"报表\n系统\",\"content\":\"功能列表：\n\t数据导出\r\n\t格式化显示\n\t\t- Excel\n\t\t- PDF\"}}]}"
+      },
+      {
+        "name": "Unicode控制字符",
+        "prompt": "创建测试系统",
+        "malformedResponse": "{\"nodes\":[{\"id\":\"n1\",\"data\":{\"label\":\"测试\u0000系统\",\"content\":\"包含\u0001特殊\u001F字符\"}}]}"
+      }
+    ]
+  },
+  "specialCharacters": {
+    "description": "测试特殊字符和编码",
+    "cases": [
+      {
+        "name": "引号和转义",
+        "prompt": "创建一个处理JSON数据的系统",
+        "expectedContent": "处理 {\"key\": \"value\"} 格式的数据，支持嵌套的 \\\"引号\\\" 和 \\\\ 反斜杠"
+      },
+      {
+        "name": "多语言混合",
+        "prompt": "创建多语言内容管理系统",
+        "expectedContent": "支持：English, 中文, 日本語, 한국어, العربية, עברית, Русский, ñ español"
+      },
+      {
+        "name": "Emoji和特殊符号",
+        "prompt": "创建社交媒体功能",
+        "expectedContent": "支持表情 😀😎🎉 和特殊符号 ™️ © ® § ¶ † ‡ • ‰"
+      }
+    ]
+  },
+  "extremeLength": {
+    "description": "测试超长内容",
+    "cases": [
+      {
+        "name": "超长节点内容",
+        "prompt": "创建一个包含详细说明的企业级系统架构",
+        "contentLength": 5000,
+        "nodeCount": 1
+      },
+      {
+        "name": "大量节点",
+        "prompt": "创建一个包含50个微服务的系统架构图",
+        "nodeCount": 50,
+        "edgeCount": 100
+      },
+      {
+        "name": "深度嵌套",
+        "prompt": "创建一个10层深的决策树系统",
+        "nestingDepth": 10
+      }
+    ]
+  },
+  "malformedJSON": {
+    "description": "测试格式错误的JSON",
+    "cases": [
+      {
+        "name": "缺少引号",
+        "malformed": "{nodes: [{id: node1, data: {label: 测试}}]}",
+        "shouldRecover": true
+      },
+      {
+        "name": "多余逗号",
+        "malformed": "{\"nodes\": [{\"id\": \"n1\", \"data\": {\"label\": \"test\",},}],}",
+        "shouldRecover": true
+      },
+      {
+        "name": "未闭合括号",
+        "malformed": "{\"nodes\": [{\"id\": \"n1\", \"data\": {\"label\": \"test\"}]",
+        "shouldRecover": false
+      },
+      {
+        "name": "包含注释",
+        "malformed": "{\"nodes\": [/* comment */{\"id\": \"n1\", // another comment\n\"data\": {\"label\": \"test\"}}]}",
+        "shouldRecover": true
+      }
+    ]
+  },
+  "aiResponseVariations": {
+    "description": "AI响应格式变化",
+    "cases": [
+      {
+        "name": "包含Markdown",
+        "response": "```json\n{\"nodes\":[{\"id\":\"n1\",\"data\":{\"label\":\"Test\"}}]}\n```\n\n以上是生成的流程图JSON。"
+      },
+      {
+        "name": "包含说明文字",
+        "response": "根据您的需求，我生成了以下流程图：\n\n{\"nodes\":[{\"id\":\"n1\",\"data\":{\"label\":\"Test\"}}]}"
+      },
+      {
+        "name": "格式美化的JSON",
+        "response": "{\n  \"nodes\": [\n    {\n      \"id\": \"node1\",\n      \"data\": {\n        \"label\": \"测试节点\",\n        \"content\": \"这是一个\n多行的\n内容\"\n      }\n    }\n  ]\n}"
+      }
+    ]
+  },
+  "errorScenarios": {
+    "description": "错误场景测试",
+    "cases": [
+      {
+        "name": "空响应",
+        "response": "",
+        "expectedError": "AI没有返回有效内容"
+      },
+      {
+        "name": "纯文本响应",
+        "response": "抱歉，我无法生成流程图",
+        "expectedError": "无效的 JSON 格式"
+      },
+      {
+        "name": "部分JSON",
+        "response": "{\"nodes\":[{\"id\":\"n1\",\"data\":{\"lab",
+        "expectedError": "无效的 JSON 格式"
+      }
+    ]
+  },
+  "performanceTests": {
+    "description": "性能测试场景",
+    "cases": [
+      {
+        "name": "快速连续请求",
+        "requestCount": 10,
+        "interval": 100
+      },
+      {
+        "name": "并发请求",
+        "concurrentRequests": 5
+      },
+      {
+        "name": "大数据量",
+        "nodeCount": 100,
+        "averageContentLength": 500
+      }
+    ]
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "testCases": [
+    {
+      "id": "test1",
+      "name": "简单电商系统",
+      "prompt": "创建一个电商购物系统，包含用户登录、商品浏览、购物车、下单支付功能",
+      "expectedNodes": 5,
+      "language": "zh"
+    },
+    {
+      "id": "test2",
+      "name": "社交媒体平台",
+      "prompt": "Design a social media platform with user registration, post creation, likes, comments, and friend connections",
+      "expectedNodes": 6,
+      "language": "en"
+    },
+    {
+      "id": "test3",
+      "name": "在线教育系统",
+      "prompt": "设计一个在线教育平台，需要包含：课程管理、视频播放、作业提交、在线考试、成绩统计、论坛讨论等功能模块",
+      "expectedNodes": 8,
+      "language": "zh"
+    },
+    {
+      "id": "test4",
+      "name": "医疗预约系统",
+      "prompt": "Build a healthcare appointment system with patient registration, doctor profiles, appointment scheduling, medical records, prescription management, and payment processing",
+      "expectedNodes": 7,
+      "language": "en"
+    },
+    {
+      "id": "test5",
+      "name": "物联网监控平台",
+      "prompt": "创建一个IoT设备监控平台，包含设备注册、实时数据采集、数据可视化、告警系统、历史数据查询、设备远程控制",
+      "expectedNodes": 7,
+      "language": "zh"
+    },
+    {
+      "id": "test6",
+      "name": "多语言测试",
+      "prompt": "オンラインバンキングシステムを設計してください。口座管理、送金、残高照会、取引履歴を含む",
+      "expectedNodes": 5,
+      "language": "ja"
+    },
+    {
+      "id": "test7",
+      "name": "复杂金融系统",
+      "prompt": "Design a comprehensive fintech platform with: 1) User authentication with 2FA, 2) Multiple account types (checking, savings, investment), 3) Real-time stock trading, 4) Cryptocurrency wallet, 5) P2P payments, 6) Bill payments, 7) Financial analytics dashboard, 8) API for third-party integrations, 9) Compliance and audit logging, 10) Customer support chat",
+      "expectedNodes": 12,
+      "language": "en"
+    },
+    {
+      "id": "test8",
+      "name": "智能家居系统",
+      "prompt": "设计智能家居控制系统：设备发现和配对、场景自动化（如回家模式）、语音控制集成、能源使用监控、安防摄像头管理、温度湿度光照传感器、手机APP远程控制、家庭成员权限管理",
+      "expectedNodes": 10,
+      "language": "zh"
+    },
+    {
+      "id": "test9",
+      "name": "供应链管理",
+      "prompt": "Create a supply chain management system with inventory tracking, order processing, supplier management, warehouse operations, logistics coordination, demand forecasting, and real-time shipment tracking",
+      "expectedNodes": 8,
+      "language": "en"
+    },
+    {
+      "id": "test10",
+      "name": "特殊字符测试",
+      "prompt": "创建一个代码分享平台，支持代码高亮、SQL查询（SELECT * FROM users WHERE id=1）、正则表达式、数学公式",
+      "expectedNodes": 5,
+      "language": "zh"
+    },
+    {
+      "id": "test11",
+      "name": "超长需求描述",
+      "prompt": "构建一个企业级ERP系统，包含以下模块：1.人力资源管理（员工档案、考勤管理、薪资计算、绩效考核、培训管理、招聘流程）；2.财务管理（总账、应收应付、成本核算、预算管理、财务报表、税务管理）；3.生产管理（生产计划、物料需求计划、车间管理、质量控制、设备维护）；4.销售管理（客户关系管理、报价管理、订单处理、发货管理、售后服务）；5.采购管理（供应商管理、采购申请、采购订单、到货验收、供应商评估）；6.库存管理（入库出库、库存盘点、库位管理、批次追踪、库存预警）；7.项目管理（项目立项、任务分配、进度跟踪、资源调配、项目结算）；8.商业智能（数据仓库、多维分析、仪表盘、自定义报表、数据挖掘）。所有模块需要统一的权限管理、工作流引擎、消息通知、系统集成接口",
+      "expectedNodes": 15,
+      "language": "zh"
+    },
+    {
+      "id": "test12",
+      "name": "技术栈混合",
+      "prompt": "Build a microservices architecture using: React.js frontend, Node.js/Express gateway, Spring Boot services, PostgreSQL, Redis cache, RabbitMQ messaging, Elasticsearch, Docker/K8s deployment, with OAuth2.0 authentication",
+      "expectedNodes": 10,
+      "language": "en"
+    }
+  ]
+}

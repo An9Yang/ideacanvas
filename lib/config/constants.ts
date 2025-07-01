@@ -35,8 +35,8 @@ export const AI_CONFIG = {
   
   // Validation Rules
   VALIDATION: {
-    MIN_CONTENT_LENGTH: 100,
-    MIN_EXTERNAL_SERVICE_CONTENT_LENGTH: 150,
+    MIN_CONTENT_LENGTH: 20,  // 降低到 20 字符，允许简单描述
+    MIN_EXTERNAL_SERVICE_CONTENT_LENGTH: 30,  // 降低到 30 字符
   },
 } as const;
 
