@@ -8,6 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
+    "test": "npx ts-node tests/run-tests.ts",
+    "test:quick": "npx ts-node tests/quick-test.ts",
+    "test:comprehensive": "npx ts-node tests/comprehensive-test.ts",
+    "test:all": "npm run test:quick && npm run test && npm run test:comprehensive",
+    "test:flow": "npx ts-node tests/run-flow-stress-test.ts",
     "test:openai": "node -r @swc/register scripts/test-azure-openai.ts",
     "dev:gpt": "env-cmd -f .env.gpt4 next dev",
     "dev:o4": "env-cmd -f .env.o4mini next dev"

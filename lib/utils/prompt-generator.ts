@@ -20,7 +20,12 @@ CRITICAL REQUIREMENT FOR OUTPUT FORMAT:
 1. Your response MUST be a valid JSON object only.
 2. Do NOT include any markdown code blocks like \`\`\`json or \`\`\`.
 3. Do NOT include any explanatory text before or after the JSON.
-4. The JSON MUST have this exact structure:
+4. IMPORTANT: All text in "label" and "content" fields MUST have properly escaped characters:
+   - Replace newlines with \\n
+   - Replace tabs with \\t
+   - Replace quotes with \\"
+   - NO raw newlines or control characters in string values
+5. The JSON MUST have this exact structure:
 {
   "nodes": [
     {
@@ -28,7 +33,7 @@ CRITICAL REQUIREMENT FOR OUTPUT FORMAT:
       "type": "product|external|context",
       "data": {
         "label": "Node Title",
-        "content": "Detailed content..."
+        "content": "Detailed content with\\nproper escaping"
       },
       "position": { "x": 100, "y": 200 }
     }
@@ -38,12 +43,13 @@ CRITICAL REQUIREMENT FOR OUTPUT FORMAT:
       "id": "edge_1",
       "source": "source_node_id",
       "target": "target_node_id",
-      "label": "Edge description..."
+      "label": "Edge description"
     }
   ]
 }
 
-IMPORTANT: Each node MUST have id, type, data (with label and content), and position fields.`;
+IMPORTANT: Each node MUST have id, type, data (with label and content), and position fields.
+CRITICAL: Ensure all string values are properly JSON-escaped. No raw newlines allowed!`;
   
   return `${FLOW_GENERATION_PROMPT}\n\n${instruction}${jsonFormatInstruction}`;
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { GeneratedFlow } from '@/lib/types/flow';
+import { GeneratedFlow, GeneratedNode, GeneratedEdge } from '@/lib/types/flow';
 import { azureOpenAI } from '@/lib/config/azure-openai';
 import { configService } from '@/lib/config';
 import { errorService, ErrorCode } from '@/lib/services/error-service';
@@ -173,17 +173,43 @@ export async function POST(request: Request) {
         );
         
         // Log raw response for debugging
-        console.log('Raw AI response:', aiResponse);
+        console.log('Raw AI response length:', aiResponse.length);
+        if (aiResponse.length > 1000) {
+          console.log('Raw AI response (first 500 chars):', aiResponse.substring(0, 500));
+          console.log('Raw AI response (last 500 chars):', aiResponse.substring(aiResponse.length - 500));
+        } else {
+          console.log('Raw AI response:', aiResponse);
+        }
         
         // Clean and parse response
         const cleanedContent = cleanAIResponse(aiResponse);
-        console.log('Cleaned content:', cleanedContent);
+        console.log('Cleaned content length:', cleanedContent.length);
         
         const sanitizedContent = sanitizeJSON(cleanedContent);
-        console.log('Sanitized content:', sanitizedContent);
+        console.log('Sanitized content length:', sanitizedContent.length);
+        
+        // Try to identify the exact position of the error
+        try {
+          const parsedData = validateJSON(sanitizedContent);
+          console.log('Parsed data successfully, nodes count:', parsedData.nodes?.length || 0);
+          console.log('Parsed data successfully, edges count:', parsedData.edges?.length || 0);
+        } catch (parseError) {
+          // Extract more context around the error position
+          if (parseError instanceof Error && parseError.message.includes('position')) {
+            const match = parseError.message.match(/position (\d+)/);
+            if (match) {
+              const position = parseInt(match[1]);
+              const start = Math.max(0, position - 100);
+              const end = Math.min(sanitizedContent.length, position + 100);
+              console.error('JSON parse error at position', position);
+              console.error('Context around error:', sanitizedContent.substring(start, end));
+              console.error('Character at position:', sanitizedContent.charCodeAt(position));
+            }
+          }
+          throw parseError;
+        }
         
         const parsedData = validateJSON(sanitizedContent);
-        console.log('Parsed data:', parsedData);
         
         // Validate flow data
         flowData = validateFlowData(parsedData);
@@ -231,6 +257,13 @@ export async function POST(request: Request) {
     }
     
     // Generic error handling
-    return handleAPIError(error);
+    const errorResponse = handleAPIError(error);
+    return NextResponse.json(
+      { 
+        error: errorResponse.error,
+        details: errorResponse.details 
+      },
+      { status: errorResponse.statusCode }
+    );
   }
 }
