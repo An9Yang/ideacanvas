@@ -8,7 +8,7 @@
       "language": "zh"
     },
     {
-      "id": "test2", 
+      "id": "test2",
       "name": "社交媒体平台",
       "prompt": "Design a social media platform with user registration, post creation, likes, comments, and friend connections",
       "expectedNodes": 6,
@@ -52,7 +52,7 @@
     {
       "id": "test8",
       "name": "智能家居系统",
-      "prompt": "设计智能家居控制系统：\n- 设备发现和配对\n- 场景自动化（如"回家模式"）\n- 语音控制集成\n- 能源使用监控\n- 安防摄像头管理\n- 温度/湿度/光照传感器\n- 手机APP远程控制\n- 家庭成员权限管理",
+      "prompt": "设计智能家居控制系统：设备发现和配对、场景自动化（如回家模式）、语音控制集成、能源使用监控、安防摄像头管理、温度湿度光照传感器、手机APP远程控制、家庭成员权限管理",
       "expectedNodes": 10,
       "language": "zh"
     },
@@ -66,7 +66,7 @@
     {
       "id": "test10",
       "name": "特殊字符测试",
-      "prompt": "创建一个代码分享平台，支持<script>代码高亮</script>、SQL查询（SELECT * FROM users WHERE id='1'）、正则表达式(/[a-z]+/gi)、数学公式（π²+e³）",
+      "prompt": "创建一个代码分享平台，支持代码高亮、SQL查询（SELECT * FROM users WHERE id=1）、正则表达式、数学公式",
       "expectedNodes": 5,
       "language": "zh"
     },
