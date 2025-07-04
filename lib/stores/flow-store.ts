@@ -21,6 +21,8 @@ export const useFlowStore = create<FlowState>()(
       edges: [],
       history: [],
       currentHistoryIndex: -1,
+      generationProgress: { status: '', progress: 0 },
+      isGenerating: false,
 
       // 节点管理
       addNode: (position, type = 'product', title = '新节点', content = '') => {
@@ -97,10 +99,22 @@ export const useFlowStore = create<FlowState>()(
         set({ nodes: updatedNodes });
       },
 
+      setGenerationProgress: (status: string, progress: number) => {
+        set({ 
+          generationProgress: { status, progress },
+          isGenerating: progress < 100
+        });
+      },
+
       generateFlow: async (prompt: string) => {
         try {
-          // Step 1: Generate flow from AI
-          const flowData = await generateFlowFromPrompt(prompt);
+          // 设置生成状态
+          set({ isGenerating: true });
+          
+          // Step 1: Generate flow from AI with progress callback
+          const flowData = await generateFlowFromPrompt(prompt, (status, progress) => {
+            get().setGenerationProgress(status, progress);
+          });
           
           // Step 2: Process flow data using service
           const { nodes, edges, documentNode, documentEdges } = 
@@ -155,7 +169,15 @@ export const useFlowStore = create<FlowState>()(
           }, 200);
         } catch (error) {
           console.error('Failed to generate flow:', error);
+          // 重置生成状态
+          set({ 
+            isGenerating: false,
+            generationProgress: { status: '生成失败', progress: 0 }
+          });
           throw error;
+        } finally {
+          // 确保重置生成状态
+          set({ isGenerating: false });
         }
       },
 

@@ -64,6 +64,12 @@ export interface FlowState {
   currentFlow: Flow | null;
   nodes: Node[];
   edges: Edge[];
+  // 生成进度状态
+  generationProgress?: {
+    status: string;
+    progress: number;
+  };
+  isGenerating?: boolean;
   addNode: (position: { x: number; y: number }, type?: NodeType, title?: string, content?: string) => void;
   updateNodes: (nodes: Node[]) => void;
   updateEdges: (edges: Edge[]) => void;
@@ -77,8 +83,10 @@ export interface FlowState {
   removeNode: (id: string) => void;
   removeEdge: (id: string) => void;
   generateFlow: (prompt: string) => Promise<void>;
+  setGenerationProgress: (status: string, progress: number) => void;
   saveFlow: (name: string) => Flow;
   loadFlow: (id: string) => void;
+  loadCloudFlow?: (flowId: string) => Promise<void>;
   deleteFlow: (id: string) => void;
   undo?: () => boolean;
   redo?: () => boolean;
