@@ -4,14 +4,17 @@ import { handleAPIError } from '@/lib/utils/error-handler';
 import { aiService } from './ai-service';
 
 /**
- * Generate flow from prompt using unified AI service
+ * Generate flow from prompt using unified AI service with progress callback
  * @deprecated Use aiService.generateFlow() directly
  */
-export async function generateFlowFromPrompt(prompt: string): Promise<GeneratedFlow> {
+export async function generateFlowFromPrompt(
+  prompt: string,
+  onProgress?: (status: string, progress: number) => void
+): Promise<GeneratedFlow> {
   try {
     console.log('发送生成流程请求，prompt:', prompt);
 
-    const data = await aiService.generateFlow({ prompt });
+    const data = await aiService.generateFlow({ prompt }, onProgress);
     console.log('响应数据:', data);
 
     // 验证返回的数据结构是否符合预期

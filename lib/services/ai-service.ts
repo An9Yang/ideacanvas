@@ -91,9 +91,12 @@ export class AIService {
   }
   
   /**
-   * Generate flow from prompt (delegates to API endpoint)
+   * Generate flow from prompt with SSE streaming
    */
-  async generateFlow(request: FlowGenerationRequest): Promise<FlowGenerationResponse> {
+  async generateFlow(
+    request: FlowGenerationRequest,
+    onProgress?: (status: string, progress: number) => void
+  ): Promise<FlowGenerationResponse> {
     return errorService.wrapAsync(
       async () => {
         const response = await fetch('/api/generate-flow', {
@@ -104,26 +107,84 @@ export class AIService {
           body: JSON.stringify(request),
         });
         
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
+        if (!response.ok || !response.body) {
           throw errorService.createError(
             ErrorCode.FLOW_GENERATION_FAILED,
-            errorData?.error || `生成流程失败: ${response.statusText}`,
-            { statusCode: response.status, errorData }
+            `生成流程失败: ${response.statusText}`,
+            { statusCode: response.status }
           );
         }
         
-        const data = await response.json();
+        // 处理SSE流
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
         
-        // Validate response format
-        if (!data.nodes || !Array.isArray(data.nodes) || !data.edges || !Array.isArray(data.edges)) {
-          throw errorService.createError(
-            ErrorCode.FLOW_INVALID_FORMAT,
-            '响应格式错误: 缺少 nodes 或 edges'
-          );
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              
+              try {
+                const event = JSON.parse(data);
+                
+                switch (event.type) {
+                  case 'heartbeat':
+                    // 心跳，忽略
+                    break;
+                    
+                  case 'status':
+                    // 进度更新
+                    if (onProgress) {
+                      onProgress(event.message, event.progress);
+                    }
+                    break;
+                    
+                  case 'complete':
+                    // 完成，返回数据
+                    const flowData = event.data;
+                    
+                    // Validate response format
+                    if (!flowData.nodes || !Array.isArray(flowData.nodes) || 
+                        !flowData.edges || !Array.isArray(flowData.edges)) {
+                      throw errorService.createError(
+                        ErrorCode.FLOW_INVALID_FORMAT,
+                        '响应格式错误: 缺少 nodes 或 edges'
+                      );
+                    }
+                    
+                    return flowData;
+                    
+                  case 'error':
+                    // 错误
+                    throw errorService.createError(
+                      event.code || ErrorCode.FLOW_GENERATION_FAILED,
+                      event.error || '生成失败'
+                    );
+                }
+              } catch (e) {
+                // 忽略解析错误，可能是不完整的JSON
+                if (e instanceof Error && !e.message.includes('JSON')) {
+                  throw e;
+                }
+              }
+            }
+          }
         }
         
-        return data;
+        // 如果没有收到complete事件
+        throw errorService.createError(
+          ErrorCode.FLOW_GENERATION_FAILED,
+          '流式响应未正常结束'
+        );
       },
       'generateFlow',
       ErrorCode.FLOW_GENERATION_FAILED

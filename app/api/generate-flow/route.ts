@@ -132,20 +132,62 @@ function validateFlowData(flowData: any): GeneratedFlow {
 }
 
 /**
+ * 创建SSE流式响应
+ */
+function createSSEStream() {
+  const encoder = new TextEncoder();
+  let controller: ReadableStreamDefaultController;
+  
+  const stream = new ReadableStream({
+    start(c) {
+      controller = c;
+    },
+    cancel() {
+      // 清理资源
+    }
+  });
+  
+  const send = (data: any) => {
+    const message = `data: ${JSON.stringify(data)}\n\n`;
+    controller.enqueue(encoder.encode(message));
+  };
+  
+  const close = () => {
+    controller.close();
+  };
+  
+  return { stream, send, close };
+}
+
+/**
  * POST /api/generate-flow
- * Generate a flow diagram from user prompt
+ * Generate a flow diagram from user prompt with SSE to avoid timeout
  */
 export async function POST(request: Request) {
+  // 创建SSE流
+  const { stream, send, close } = createSSEStream();
+  
+  // 设置心跳定时器
+  const heartbeatInterval = setInterval(() => {
+    send({ type: 'heartbeat', timestamp: Date.now() });
+  }, 5000); // 每5秒发送一次心跳
+  
   try {
     // Step 1: Validate request
     const body = await request.json();
     const validation = validateRequestBody(body);
     
     if (!validation.isValid) {
-      return NextResponse.json(
-        { error: validation.error },
-        { status: 400 }
-      );
+      send({ type: 'error', error: validation.error });
+      clearInterval(heartbeatInterval);
+      close();
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
     }
     
     const prompt = validation.prompt!;
@@ -153,6 +195,9 @@ export async function POST(request: Request) {
     // Step 2: Detect language
     const userLanguage = detectLanguage(prompt);
     const systemPrompt = generateSystemPrompt(userLanguage);
+    
+    // 发送开始生成的消息
+    send({ type: 'status', message: '开始生成流程图...', progress: 10 });
     
     // Step 3: Generate flow (with retry logic)
     let flowData: GeneratedFlow | null = null;
@@ -164,6 +209,13 @@ export async function POST(request: Request) {
         const finalPrompt = attempt === 0 
           ? prompt 
           : generateRetryPrompt(prompt, lastError!, userLanguage);
+        
+        // 发送AI调用状态
+        send({ 
+          type: 'status', 
+          message: attempt === 0 ? '正在分析需求...' : '正在重试生成...', 
+          progress: attempt === 0 ? 30 : 50 
+        });
         
         // Call AI
         const aiResponse = await generateFlowWithAI(
@@ -211,8 +263,14 @@ export async function POST(request: Request) {
         
         const parsedData = validateJSON(sanitizedContent);
         
+        // 发送验证状态
+        send({ type: 'status', message: '正在验证数据...', progress: 80 });
+        
         // Validate flow data
         flowData = validateFlowData(parsedData);
+        
+        // 发送成功状态
+        send({ type: 'status', message: '生成成功！', progress: 100 });
         break; // Success, exit retry loop
         
       } catch (error) {
@@ -233,37 +291,47 @@ export async function POST(request: Request) {
       );
     }
     
-    // Step 4: Return response
-    return NextResponse.json({
-      ...flowData,
-      userLanguage
+    // Step 4: 发送最终数据并关闭流
+    send({
+      type: 'complete',
+      data: {
+        ...flowData,
+        userLanguage
+      }
+    });
+    
+    clearInterval(heartbeatInterval);
+    close();
+    
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no' // 禁用Nginx缓冲
+      },
     });
     
   } catch (error) {
     console.error('Flow generation error:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    // Handle different error types
-    if (error && typeof error === 'object' && 'code' in error) {
-      const appError = error as any;
-      return NextResponse.json(
-        {
-          error: appError.message,
-          code: appError.code,
-          details: appError.details
-        },
-        { status: appError.statusCode || 500 }
-      );
-    }
+    // 发送错误消息
+    send({
+      type: 'error',
+      error: error instanceof Error ? error.message : '生成失败',
+      code: error && typeof error === 'object' && 'code' in error ? (error as any).code : 'UNKNOWN_ERROR'
+    });
     
-    // Generic error handling
-    const errorResponse = handleAPIError(error);
-    return NextResponse.json(
-      { 
-        error: errorResponse.error,
-        details: errorResponse.details 
+    clearInterval(heartbeatInterval);
+    close();
+    
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
-      { status: errorResponse.statusCode }
-    );
+    });
   }
 }
