@@ -431,6 +431,9 @@ export const useFlowStore = create<FlowState>()(
       storage: {
         getItem: (name) => {
           try {
+            if (typeof window === 'undefined') {
+              return null;
+            }
             const str = localStorage.getItem(name);
             if (!str) return null;
             
@@ -454,6 +457,9 @@ export const useFlowStore = create<FlowState>()(
         },
         setItem: (name, value) => {
           try {
+            if (typeof window === 'undefined') {
+              return;
+            }
             // Only store essential data to minimize storage usage
             const minimalState = {
               ...value,
@@ -489,8 +495,10 @@ export const useFlowStore = create<FlowState>()(
             // If still failing, clear localStorage and continue
             if (error instanceof DOMException && error.name === 'QuotaExceededError') {
               try {
-                localStorage.clear();
-                console.log('Cleared localStorage due to quota exceeded');
+                if (typeof window !== 'undefined') {
+                  localStorage.clear();
+                  console.log('Cleared localStorage due to quota exceeded');
+                }
               } catch (clearError) {
                 console.error('Failed to clear localStorage:', clearError);
               }
@@ -498,7 +506,9 @@ export const useFlowStore = create<FlowState>()(
           }
         },
         removeItem: (name) => {
-          localStorage.removeItem(name);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(name);
+          }
         },
       },
     }

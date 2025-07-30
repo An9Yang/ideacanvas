@@ -80,7 +80,28 @@ Multiple OpenAI service files exist - use `azure-ai.ts` as the primary service.
 - History is limited to 10 states to prevent memory issues
 
 ## Testing Approach
-Currently no automated tests. Manual testing focuses on:
+
+### Mandatory Testing Rules
+1. **每个阶段性步骤完成后必须运行单元测试**
+2. **所有单元构建完成后必须运行端到端全流程测试**
+3. **所有测试必须使用真实数据和API，无例外**
+4. **测试失败必须立即修复，不能跳过**
+5. **每次测试结果必须记录在v2.md中**
+
+### Test Commands
+```bash
+# Run unit tests (to be implemented)
+npm run test
+
+# Run e2e tests (to be implemented)
+npm run test:e2e
+
+# Run all tests
+npm run test:all
+```
+
+### Current Testing Focus
+Manual testing currently focuses on:
 - Flow generation from various prompts
 - Node manipulation on canvas
 - Language switching

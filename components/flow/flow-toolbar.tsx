@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, Cloud } from "lucide-react";
+import { HelpCircle, Cloud, Code } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -11,13 +11,17 @@ import {
 } from "@/components/ui/tooltip";
 import { useTranslation } from "@/hooks/useTranslation";
 import { FlowManagerDialog } from "./flow-manager-dialog";
+import { CodeGeneratorDialog } from "@/components/code-generator/CodeGeneratorDialog";
+import { useFlowStore } from "@/lib/stores/flow-store";
 
 interface FlowToolbarProps {
 }
 
 export function FlowToolbar() {
   const [isManagerOpen, setIsManagerOpen] = useState(false);
+  const [isCodeGeneratorOpen, setIsCodeGeneratorOpen] = useState(false);
   const { t, language } = useTranslation();
+  const { nodes } = useFlowStore();
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-4">
@@ -30,6 +34,16 @@ export function FlowToolbar() {
         >
           <Cloud className="w-4 h-4" />
           {language === 'zh' ? '云端流程图' : 'Cloud Flows'}
+        </Button>
+
+        <Button 
+          variant="outline" 
+          className="flex items-center gap-2"
+          onClick={() => setIsCodeGeneratorOpen(true)}
+          disabled={nodes.length === 0}
+        >
+          <Code className="w-4 h-4" />
+          {language === 'zh' ? '生成应用' : 'Generate App'}
         </Button>
 
         <Tooltip>
@@ -56,6 +70,11 @@ export function FlowToolbar() {
         open={isManagerOpen} 
         onOpenChange={setIsManagerOpen}
         language={language}
+      />
+      
+      <CodeGeneratorDialog
+        open={isCodeGeneratorOpen}
+        onClose={() => setIsCodeGeneratorOpen(false)}
       />
     </div>
   );

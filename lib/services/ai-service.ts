@@ -58,6 +58,12 @@ export class AIService {
         const client = aiClient.getClient();
         const params = configService.getCompletionParams();
         
+        console.log('[AI Service] 生成完成请求:', {
+          promptLength: options.prompt.length,
+          maxTokens: options.maxTokens,
+          hasSystemPrompt: !!options.systemPrompt
+        });
+        
         const messages: any[] = [];
         
         if (options.systemPrompt) {
@@ -66,24 +72,75 @@ export class AIService {
         
         messages.push({ role: 'user', content: options.prompt });
         
-        const response = await client.chat.completions.create({
-          model: configService.getAzureConfig().deploymentName,
+        // 检查模型类型来决定使用哪个参数
+        const modelName = configService.getAzureConfig().deploymentName;
+        const isO3Model = modelName.toLowerCase().includes('o3');
+        const isO4Model = modelName.toLowerCase().includes('o4');
+        
+        const completionParams: any = {
+          model: modelName,
           messages,
-          temperature: options.temperature ?? params.TEMPERATURE,
-          max_tokens: options.maxTokens ?? params.MAX_TOKENS,
-          top_p: options.topP ?? params.TOP_P,
-          frequency_penalty: options.frequencyPenalty ?? params.FREQUENCY_PENALTY,
-          presence_penalty: options.presencePenalty ?? params.PRESENCE_PENALTY,
+        };
+        
+        // o3 和 o4 模型都使用 max_completion_tokens
+        if (isO3Model || isO4Model) {
+          completionParams.max_completion_tokens = options.maxTokens ?? params.MAX_TOKENS;
+          
+          // o4-mini 支持其他参数，但 o3 不支持
+          if (isO4Model) {
+            completionParams.temperature = options.temperature ?? params.TEMPERATURE;
+            completionParams.top_p = options.topP ?? params.TOP_P;
+            completionParams.frequency_penalty = options.frequencyPenalty ?? params.FREQUENCY_PENALTY;
+            completionParams.presence_penalty = options.presencePenalty ?? params.PRESENCE_PENALTY;
+          }
+        } else {
+          // 其他模型使用标准参数
+          completionParams.max_tokens = options.maxTokens ?? params.MAX_TOKENS;
+          completionParams.temperature = options.temperature ?? params.TEMPERATURE;
+          completionParams.top_p = options.topP ?? params.TOP_P;
+          completionParams.frequency_penalty = options.frequencyPenalty ?? params.FREQUENCY_PENALTY;
+          completionParams.presence_penalty = options.presencePenalty ?? params.PRESENCE_PENALTY;
+        }
+        
+        console.log('[AI Service] 发送请求参数:', JSON.stringify(completionParams, null, 2));
+        
+        const response = await client.chat.completions.create(completionParams);
+        
+        console.log('[AI Service] 收到响应:', {
+          hasChoices: !!response.choices,
+          choicesLength: response.choices?.length,
+          hasContent: !!response.choices?.[0]?.message?.content,
+          contentLength: response.choices?.[0]?.message?.content?.length
         });
         
-        if (!response.choices[0]?.message?.content) {
+        if (!response.choices || response.choices.length === 0) {
+          throw errorService.createError(
+            ErrorCode.AI_INVALID_RESPONSE,
+            'AI响应中没有choices'
+          );
+        }
+        
+        const messageContent = response.choices[0]?.message?.content;
+        
+        // o4-mini 模型可能在 reasoning 阶段使用 token，检查是否有推理内容
+        if (!messageContent && response.usage?.completion_tokens_details?.reasoning_tokens && response.usage.completion_tokens_details.reasoning_tokens > 0) {
+          console.warn('[AI Service] o4-mini 模型返回了推理token但没有内容，可能需要更多token');
+          // 对于o4-mini，如果没有内容但有推理token，说明token限制太低
+          throw errorService.createError(
+            ErrorCode.AI_INVALID_RESPONSE,
+            'o4-mini模型需要更多token来完成响应，请增加maxTokens参数'
+          );
+        }
+        
+        if (!messageContent) {
+          console.error('[AI Service] 响应结构:', JSON.stringify(response, null, 2));
           throw errorService.createError(
             ErrorCode.AI_INVALID_RESPONSE,
             'AI没有返回有效内容'
           );
         }
         
-        return response.choices[0].message.content;
+        return messageContent;
       },
       'generateCompletion',
       ErrorCode.AI_COMPLETION_FAILED
