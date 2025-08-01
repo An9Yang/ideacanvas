@@ -84,10 +84,14 @@ export class AIService {
         
         // o3 和 o4 模型都使用 max_completion_tokens
         if (isO3Model || isO4Model) {
-          completionParams.max_completion_tokens = options.maxTokens ?? params.MAX_TOKENS;
-          
-          // o4-mini 支持其他参数，但 o3 不支持
-          if (isO4Model) {
+          // o3 模型: 设置最大可能的 token 数
+          if (isO3Model) {
+            // o3 支持更大的上下文窗口
+            completionParams.max_completion_tokens = options.maxTokens ?? 100000; // o3 支持高达 100k tokens
+            // o3 不支持其他参数，temperature 固定为 1
+          } else if (isO4Model) {
+            // o4-mini 支持标准参数
+            completionParams.max_completion_tokens = options.maxTokens ?? params.MAX_TOKENS;
             completionParams.temperature = options.temperature ?? params.TEMPERATURE;
             completionParams.top_p = options.topP ?? params.TOP_P;
             completionParams.frequency_penalty = options.frequencyPenalty ?? params.FREQUENCY_PENALTY;

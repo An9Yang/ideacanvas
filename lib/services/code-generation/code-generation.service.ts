@@ -56,11 +56,21 @@ export class CodeGenerationServiceImpl implements CodeGenerationService {
         );
       }
 
-      // 查找文档节点（绿色）
-      const documentNode = nodes.find(node => node.type === 'document');
+      // 查找文档节点（绿色）或内容最丰富的节点
+      let documentNode = nodes.find(node => node.type === 'document');
+      
+      // 如果没有文档节点，使用内容最丰富的节点
+      if (!documentNode) {
+        documentNode = nodes.reduce((best, node) => {
+          const currentContent = node.data?.content || '';
+          const bestContent = best?.data?.content || '';
+          return currentContent.length > bestContent.length ? node : best;
+        }, nodes[0]);
+      }
+      
       if (!documentNode || !documentNode.data?.content) {
         throw new CodeGenerationError(
-          options.language === 'zh' ? '请先生成项目文档节点' : 'Please generate project document node first',
+          options.language === 'zh' ? '流程图中没有包含内容的节点' : 'No node with content found in the flow',
           ErrorCodes.EMPTY_FLOW
         );
       }

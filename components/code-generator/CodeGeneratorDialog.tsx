@@ -54,12 +54,46 @@ export function CodeGeneratorDialog({ open, onClose }: CodeGeneratorDialogProps)
       
       setGenerationStage(language === 'zh' ? '调用AI生成代码中（可能需要30-60秒）...' : 'Calling AI to generate code (may take 30-60s)...');
       
-      const result = await codeGenerationService.generateFromFlow(nodes, edges, {
-        language,
-        framework: 'vanilla',
-        styling: 'tailwind',
-        includeComments: true
+      // 查找文档节点或内容最丰富的节点
+      let documentNode = nodes.find(node => node.type === 'document');
+      if (!documentNode) {
+        documentNode = nodes.reduce((best, node) => {
+          // 兼容两种数据格式
+          const currentContent = node.data?.content || (node as any)?.content || '';
+          const bestContent = best?.data?.content || (best as any)?.content || '';
+          return currentContent.length > bestContent.length ? node : best;
+        }, nodes[0]);
+      }
+      
+      // 获取内容，兼容两种格式
+      const nodeContent = documentNode?.data?.content || (documentNode as any)?.content;
+      const nodeTitle = documentNode?.data?.label || documentNode?.data?.title || (documentNode as any)?.title;
+      
+      if (!nodeContent) {
+        throw new Error(language === 'zh' ? '未找到包含内容的节点' : 'No node with content found');
+      }
+      
+      // 调用真正的 AI 生成 API
+      const response = await fetch('/api/generate-code-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentContent: nodeContent,
+          options: {
+            language,
+            styling: 'tailwind'
+          }
+        })
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Code generation failed');
+      }
+      
+      const result = await response.json();
       
       setGenerationResult(result);
       toast.success(
@@ -236,7 +270,7 @@ export function CodeGeneratorDialog({ open, onClose }: CodeGeneratorDialogProps)
 
               <div className="flex-1 overflow-hidden mt-4">
                 <TabsContent value="preview" className="h-full m-0">
-                  <CodePreview html={generationResult.preview} />
+                  <CodePreview html={generationResult.pages[0]?.html || generationResult.preview} />
                 </TabsContent>
                 
                 <TabsContent value="html" className="h-full m-0">
