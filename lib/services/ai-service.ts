@@ -76,15 +76,20 @@ export class AIService {
         const modelName = configService.getAzureConfig().deploymentName;
         const isO3Model = modelName.toLowerCase().includes('o3');
         const isO4Model = modelName.toLowerCase().includes('o4');
+        const isGPT5Model = modelName.toLowerCase().includes('gpt-5') || modelName.toLowerCase().includes('gpt5');
         
         const completionParams: any = {
           model: modelName,
           messages,
         };
         
-        // o3 和 o4 模型都使用 max_completion_tokens
-        if (isO3Model || isO4Model) {
-          // o3 模型: 设置最大可能的 token 数
+        // GPT-5 models use max_completion_tokens with full context window
+        if (isGPT5Model) {
+          // GPT-5-mini supports 128k context window
+          completionParams.max_completion_tokens = options.maxTokens ?? 128000;
+          // GPT-5-mini only supports temperature = 1, similar to o3
+        } else if (isO3Model || isO4Model) {
+          // o3 和 o4 模型都使用 max_completion_tokens
           if (isO3Model) {
             // o3 支持更大的上下文窗口
             completionParams.max_completion_tokens = options.maxTokens ?? 100000; // o3 支持高达 100k tokens

@@ -9,8 +9,8 @@ export interface CloudFlow {
 }
 
 class CloudStorageService {
-  private baseUrl = '/api/flows';
   private userId = 'default-user'; // TODO: Get from auth
+  private baseUrl = '/api/flows';
 
   /**
    * Set user ID for requests
@@ -20,35 +20,30 @@ class CloudStorageService {
   }
 
   /**
-   * Get headers for requests
-   */
-  private getHeaders(): HeadersInit {
-    return {
-      'Content-Type': 'application/json',
-      'x-user-id': this.userId,
-    };
-  }
-
-  /**
-   * Save flow to cloud
+   * Save flow via API
    */
   async saveFlow(flow: { name?: string; nodes: any[]; edges: any[] }): Promise<CloudFlow> {
     try {
       const response = await fetch(this.baseUrl, {
         method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(flow),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: this.userId,
+          ...flow,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`Failed to save flow: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.flow;
+      return await response.json();
     } catch (error) {
-      console.error('Failed to save flow to cloud:', error);
-      throw error;
+      console.error('Failed to save flow:', error);
+      // Fallback to local-only flow
+      return this.generateLocalFlow(flow);
     }
   }
 
@@ -59,16 +54,20 @@ class CloudStorageService {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
         method: 'PUT',
-        headers: this.getHeaders(),
-        body: JSON.stringify(flow),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: this.userId,
+          ...flow,
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`Failed to update flow: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.flow;
+      return await response.json();
     } catch (error) {
       console.error('Failed to update flow:', error);
       throw error;
@@ -80,23 +79,19 @@ class CloudStorageService {
    */
   async getFlow(id: string): Promise<CloudFlow | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
-        headers: this.getHeaders(),
-      });
-
-      if (response.status === 404) {
-        return null;
-      }
-
+      const response = await fetch(`${this.baseUrl}/${id}?userId=${this.userId}`);
+      
       if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
         throw new Error(`Failed to get flow: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.flow;
+      return await response.json();
     } catch (error) {
       console.error('Failed to get flow:', error);
-      throw error;
+      return null;
     }
   }
 
@@ -105,16 +100,13 @@ class CloudStorageService {
    */
   async listFlows(): Promise<CloudFlow[]> {
     try {
-      const response = await fetch(this.baseUrl, {
-        headers: this.getHeaders(),
-      });
-
+      const response = await fetch(`${this.baseUrl}?userId=${this.userId}`);
+      
       if (!response.ok) {
         throw new Error(`Failed to list flows: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data.flows || [];
+      return await response.json();
     } catch (error) {
       console.error('Failed to list flows:', error);
       return [];
@@ -126,23 +118,14 @@ class CloudStorageService {
    */
   async deleteFlow(id: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/${id}`, {
+      const response = await fetch(`${this.baseUrl}/${id}?userId=${this.userId}`, {
         method: 'DELETE',
-        headers: this.getHeaders(),
       });
-
-      if (response.status === 404) {
-        return false;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete flow: ${response.statusText}`);
-      }
-
-      return true;
+      
+      return response.ok;
     } catch (error) {
       console.error('Failed to delete flow:', error);
-      throw error;
+      return false;
     }
   }
 
@@ -151,14 +134,26 @@ class CloudStorageService {
    */
   async isAvailable(): Promise<boolean> {
     try {
-      const response = await fetch(this.baseUrl, {
-        method: 'HEAD',
-        headers: this.getHeaders(),
-      });
-      return response.ok || response.status === 405; // HEAD might not be allowed
+      const response = await fetch(`${this.baseUrl}/health`);
+      return response.ok;
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Generate a local-only flow (fallback)
+   */
+  private generateLocalFlow(flow: { name?: string; nodes: any[]; edges: any[] }): CloudFlow {
+    return {
+      id: `local-${Date.now()}`,
+      userId: this.userId,
+      name: flow.name || `Flow ${new Date().toLocaleDateString()}`,
+      nodes: flow.nodes,
+      edges: flow.edges,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
   }
 }
 

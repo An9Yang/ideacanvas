@@ -43,9 +43,13 @@ export class FlowGenerationService {
     const idMap = new Map<string, string>();
     nodes.forEach((node) => {
       const newId = uuidv4();
-      // Map both the original ID and title to the new ID
+      // Map the original ID to the new ID
       idMap.set(node.id, newId);
-      idMap.set(node.title, newId);
+      // Also map the title if it exists (for edge references)
+      const title = node.title || node.data?.label || node.data?.title;
+      if (title && title !== node.id) {
+        idMap.set(title, newId);
+      }
     });
     return idMap;
   }
@@ -54,16 +58,24 @@ export class FlowGenerationService {
    * Transform generated nodes to processed nodes
    */
   private transformNodes(generatedNodes: GeneratedNode[], idMap: Map<string, string>): ProcessedNode[] {
-    return generatedNodes.map((node) => ({
-      id: idMap.get(node.title)!,
-      type: node.type,
-      position: node.position,
-      data: {
-        title: node.title,
-        content: node.content,
-      },
-      draggable: true,
-    }));
+    return generatedNodes.map((node) => {
+      // Try to get title from various possible locations
+      const title = node.title || node.data?.label || node.data?.title || 'Untitled';
+      // Try to get content from various possible locations
+      const content = node.content || node.data?.content || '';
+      const nodeId = idMap.get(node.id) || uuidv4();
+      
+      return {
+        id: nodeId,
+        type: node.type,
+        position: node.position,
+        data: {
+          title: title,
+          content: content,
+        },
+        draggable: true,
+      };
+    });
   }
 
   /**
