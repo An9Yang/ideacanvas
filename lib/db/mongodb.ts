@@ -9,10 +9,6 @@ declare global {
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
-if (!MONGODB_URI && process.env.NODE_ENV === 'production') {
-  throw new Error('Please define the MONGODB_URI environment variable');
-}
-
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
