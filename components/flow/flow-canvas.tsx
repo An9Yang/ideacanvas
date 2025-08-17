@@ -131,6 +131,10 @@ export function FlowCanvas() {
     toast.success('edgeDeleted');
   }, [removeEdge, toast]);
   
+  // Memoize nodeTypes to prevent React Flow warning
+  const memoizedNodeTypes = useMemo(() => NODE_TYPES, []);
+  const memoizedEdgeOptions = useMemo(() => EDGE_OPTIONS, []);
+  
   if (!isClient) {
     return (
       <div className="h-full w-full flex items-center justify-center">
@@ -150,8 +154,8 @@ export function FlowCanvas() {
           onNodesDelete={onNodesDelete}
           onEdgesDelete={onEdgesDelete}
           onConnect={onConnect}
-          nodeTypes={NODE_TYPES}
-          defaultEdgeOptions={EDGE_OPTIONS}
+          nodeTypes={memoizedNodeTypes}
+          defaultEdgeOptions={memoizedEdgeOptions}
           {...FLOW_PROPS}
           className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
         />

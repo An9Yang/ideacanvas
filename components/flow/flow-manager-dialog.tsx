@@ -23,9 +23,11 @@ export function FlowManagerDialog({ open, onOpenChange, language = 'zh' }: FlowM
   const { loadCloudFlow } = useFlowStore();
   const { toast } = useToast();
 
-  const handleLoadFlow = (flow: CloudFlow) => {
+  const handleLoadFlow = async (flow: CloudFlow) => {
     try {
-      loadCloudFlow(flow);
+      if (loadCloudFlow) {
+        await loadCloudFlow(flow.id);
+      }
       onOpenChange(false);
       toast({
         title: language === 'zh' ? '加载成功' : 'Load Successful',

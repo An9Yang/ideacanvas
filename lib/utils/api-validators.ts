@@ -71,22 +71,33 @@ export function validateNodeContent(node: GeneratedNode): {
     ];
     
     const allServices = [...COMMON_EXTERNAL_SERVICES, ...additionalServices];
+    const content = node.data?.content || '';
+    const title = node.data?.label || node.data?.title || '';
+    
+    // Check both title and content for service names
+    const textToCheck = `${title} ${content}`.toLowerCase();
     const hasSpecificService = allServices.some(service => 
-      node.content.toLowerCase().includes(service.toLowerCase())
+      textToCheck.includes(service.toLowerCase())
     );
     
     if (!hasSpecificService) {
-      return {
-        isValid: false,
-        error: `外部服务节点 "${node.title}" 未明确指定具体的第三方服务或API名称`
-      };
+      // Only fail validation if title is not empty
+      // Empty titles are warnings, not errors
+      if (title && title.trim() !== '') {
+        return {
+          isValid: false,
+          error: `外部服务节点 "${title}" 未明确指定具体的第三方服务或API名称`
+        };
+      }
+      // If title is empty, just log a warning but don't fail
+      console.warn(`外部服务节点标题为空，但内容中也未找到具体服务名称`);
     }
     
     // Check content length for external services
-    if (node.content.length < validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH) {
+    if (content.length < validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH) {
       return {
         isValid: false,
-        error: `外部服务节点 "${node.title}" 的内容太短（最少需要${validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH}字符，当前${node.content.length}字符）`
+        error: `外部服务节点 "${title}" 的内容太短（最少需要${validationRules.MIN_EXTERNAL_SERVICE_CONTENT_LENGTH}字符，当前${content.length}字符）`
       };
     }
   }

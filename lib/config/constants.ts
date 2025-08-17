@@ -8,19 +8,19 @@ export const AI_CONFIG = {
     DEFAULT_ENDPOINT: 'https://y7948-m7dkvj9c-swedencentral.openai.azure.com/',
   },
   
-  // Model Parameters (o3 model only supports temperature = 1)
+  // Model Parameters (GPT-5-mini with no token limits)
   GENERATION: {
-    TEMPERATURE: 1,
-    MAX_TOKENS: 16000,
+    TEMPERATURE: 1, // GPT-5-mini only supports temperature = 1
+    MAX_TOKENS: 128000, // GPT-5-mini supports 128k context window
     TOP_P: 1,
     FREQUENCY_PENALTY: 0,
     PRESENCE_PENALTY: 0,
   },
   
-  // Completion Parameters (for simpler requests)
+  // Completion Parameters (GPT-5-mini)
   COMPLETION: {
-    TEMPERATURE: 1,
-    MAX_TOKENS: 800,
+    TEMPERATURE: 1, // GPT-5-mini only supports temperature = 1
+    MAX_TOKENS: 128000, // Remove limit for GPT-5-mini
     TOP_P: 1,
     FREQUENCY_PENALTY: 0,
     PRESENCE_PENALTY: 0,

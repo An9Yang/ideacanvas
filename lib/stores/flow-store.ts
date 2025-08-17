@@ -346,17 +346,24 @@ export const useFlowStore = create<FlowState>()(
         }
       },
       
-      loadCloudFlow: (cloudFlow: any) => {
-        // Load flow from cloud storage
-        // Ensure nodes have proper data structure
-        const nodes = (cloudFlow.nodes || []).map((node: any) => {
-          // If node doesn't have data property, create it from title/content
-          if (!node.data) {
-            return {
-              ...node,
-              data: {
-                title: node.title || 'Untitled',
-                content: node.content || '',
+      loadCloudFlow: async (flowId: string) => {
+        try {
+          // Fetch flow from cloud storage
+          const response = await fetch(`/api/flows/${flowId}`);
+          if (!response.ok) {
+            throw new Error('Failed to load cloud flow');
+          }
+          const cloudFlow = await response.json();
+          
+          // Ensure nodes have proper data structure
+          const nodes = (cloudFlow.nodes || []).map((node: any) => {
+            // If node doesn't have data property, create it from title/content
+            if (!node.data) {
+              return {
+                ...node,
+                data: {
+                  title: node.title || 'Untitled',
+                  content: node.content || '',
                 updateNodeContent: get().updateNodeContent,
               }
             };
@@ -377,6 +384,10 @@ export const useFlowStore = create<FlowState>()(
           history: [],
           currentHistoryIndex: -1,
         });
+        } catch (error) {
+          console.error('Error loading cloud flow:', error);
+          throw error;
+        }
       },
 
       deleteFlow: (id: string) => {
@@ -420,6 +431,9 @@ export const useFlowStore = create<FlowState>()(
       storage: {
         getItem: (name) => {
           try {
+            if (typeof window === 'undefined') {
+              return null;
+            }
             const str = localStorage.getItem(name);
             if (!str) return null;
             
@@ -443,6 +457,9 @@ export const useFlowStore = create<FlowState>()(
         },
         setItem: (name, value) => {
           try {
+            if (typeof window === 'undefined') {
+              return;
+            }
             // Only store essential data to minimize storage usage
             const minimalState = {
               ...value,
@@ -478,8 +495,10 @@ export const useFlowStore = create<FlowState>()(
             // If still failing, clear localStorage and continue
             if (error instanceof DOMException && error.name === 'QuotaExceededError') {
               try {
-                localStorage.clear();
-                console.log('Cleared localStorage due to quota exceeded');
+                if (typeof window !== 'undefined') {
+                  localStorage.clear();
+                  console.log('Cleared localStorage due to quota exceeded');
+                }
               } catch (clearError) {
                 console.error('Failed to clear localStorage:', clearError);
               }
@@ -487,7 +506,9 @@ export const useFlowStore = create<FlowState>()(
           }
         },
         removeItem: (name) => {
-          localStorage.removeItem(name);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(name);
+          }
         },
       },
     }

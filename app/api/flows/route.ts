@@ -1,66 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { azureStorageService } from '@/lib/services/azure-storage.service';
+import { mongoDBStorageService } from '@/lib/services/mongodb-storage.service';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
-/**
- * GET /api/flows - List all flows for current user
- */
+// GET /api/flows - List all flows for a user
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Get actual user ID from session/auth
-    const userId = request.headers.get('x-user-id') || 'default-user';
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId') || 'default-user';
     
-    if (!azureStorageService.isAvailable()) {
-      // Fallback to returning empty list if Azure Storage not configured
-      return NextResponse.json({ flows: [] });
+    // Check if MongoDB is available
+    const isAvailable = await mongoDBStorageService.isAvailable();
+    if (!isAvailable) {
+      return NextResponse.json(
+        { flows: [], message: 'MongoDB not configured, using local storage only' },
+        { status: 200 }
+      );
     }
 
-    const flows = await azureStorageService.listFlows(userId);
-    
-    return NextResponse.json({ flows });
+    const flows = await mongoDBStorageService.listFlows(userId);
+    return NextResponse.json(flows);
   } catch (error) {
     console.error('Failed to list flows:', error);
     return NextResponse.json(
-      { error: 'Failed to list flows' },
+      { error: 'Failed to list flows', flows: [] },
       { status: 500 }
     );
   }
 }
 
-/**
- * POST /api/flows - Save a new flow
- */
+// POST /api/flows - Create a new flow
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Get actual user ID from session/auth
-    const userId = request.headers.get('x-user-id') || 'default-user';
-    
-    if (!azureStorageService.isAvailable()) {
-      return NextResponse.json(
-        { error: 'Azure Storage not configured' },
-        { status: 503 }
-      );
-    }
-
     const body = await request.json();
-    const { name, nodes, edges } = body;
+    const userId = body.userId || 'default-user';
 
-    if (!nodes || !edges) {
-      return NextResponse.json(
-        { error: 'Missing nodes or edges' },
-        { status: 400 }
-      );
+    // Check if MongoDB is available
+    const isAvailable = await mongoDBStorageService.isAvailable();
+    if (!isAvailable) {
+      // Return a local-only flow
+      const localFlow = {
+        id: `local-${Date.now()}`,
+        userId,
+        name: body.name || `Flow ${new Date().toLocaleDateString()}`,
+        nodes: body.nodes || [],
+        edges: body.edges || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      return NextResponse.json({ flow: localFlow });
     }
 
-    const flow = await azureStorageService.saveFlow(userId, {
-      name,
-      nodes,
-      edges,
-    });
-    
-    return NextResponse.json({ flow });
+    const flow = await mongoDBStorageService.saveFlow(userId, body);
+    return NextResponse.json(flow);
   } catch (error) {
     console.error('Failed to save flow:', error);
     return NextResponse.json(

@@ -43,8 +43,11 @@ export interface HistoryState {
 export interface GeneratedNode {
   id: string;
   type: NodeType;
-  title: string;
-  content: string;
+  data: {
+    label?: string;
+    title?: string;
+    content: string;
+  };
   position: { x: number; y: number };
 }
 

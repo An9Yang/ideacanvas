@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { CloudFlow } from '@/lib/services/cloud-storage.service';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
   const { toast } = useToast();
   const locale = language === 'zh' ? zhCN : enUS;
 
-  const fetchFlows = async () => {
+  const fetchFlows = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch('/api/flows', {
@@ -49,11 +49,11 @@ export function FlowList({ onLoadFlow, language = 'zh' }: FlowListProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, toast]);
 
   useEffect(() => {
     fetchFlows();
-  }, []);
+  }, [fetchFlows]);
 
   const handleDelete = async (flowId: string) => {
     if (!confirm(language === 'zh' ? '确定要删除这个流程图吗？' : 'Are you sure you want to delete this flow?')) {

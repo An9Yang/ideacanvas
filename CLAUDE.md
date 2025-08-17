@@ -80,39 +80,30 @@ Multiple OpenAI service files exist - use `azure-ai.ts` as the primary service.
 - History is limited to 10 states to prevent memory issues
 
 ## Testing Approach
-Currently no automated tests. Manual testing focuses on:
+
+### Mandatory Testing Rules
+1. **每个阶段性步骤完成后必须运行单元测试**
+2. **所有单元构建完成后必须运行端到端全流程测试**
+3. **所有测试必须使用真实数据和API，无例外**
+4. **测试失败必须立即修复，不能跳过**
+5. **每次测试结果必须记录在v2.md中**
+
+### Test Commands
+```bash
+# Run unit tests (to be implemented)
+npm run test
+
+# Run e2e tests (to be implemented)
+npm run test:e2e
+
+# Run all tests
+npm run test:all
+```
+
+### Current Testing Focus
+Manual testing currently focuses on:
 - Flow generation from various prompts
 - Node manipulation on canvas
 - Language switching
 - Save/load functionality
 
-## Cloud Storage Integration
-
-### Azure Blob Storage Setup
-The project now supports Azure Blob Storage for persistent flow storage, solving localStorage quota issues.
-
-#### Configuration
-Add to `.env`:
-```
-AZURE_STORAGE_ACCOUNT_NAME=your_storage_account_name
-AZURE_STORAGE_ACCOUNT_KEY=your_storage_account_key
-AZURE_STORAGE_CONTAINER_NAME=ideacanvas-flows
-```
-
-#### Features
-- **Automatic Save**: Flows are automatically saved to cloud after generation
-- **Hybrid Storage**: localStorage for caching, Azure Blob for persistence
-- **Graceful Degradation**: Works without cloud storage configured
-- **Quota Management**: Automatically cleans old history when localStorage is full
-
-#### API Endpoints
-- `GET /api/flows` - List all flows
-- `POST /api/flows` - Save new flow
-- `GET /api/flows/[id]` - Get specific flow
-- `PUT /api/flows/[id]` - Update flow
-- `DELETE /api/flows/[id]` - Delete flow
-
-#### Known Limitations
-- Currently uses placeholder user ID ('default-user')
-- No authentication implemented yet
-- Manual flow management UI not yet implemented

@@ -61,7 +61,7 @@ quickTests.forEach(({ name, test }) => {
     console.log(`✅ ${name}`);
     passed++;
   } catch (error) {
-    console.log(`❌ ${name}: ${error.message}`);
+    console.log(`❌ ${name}: ${error instanceof Error ? error.message : String(error)}`);
     failed++;
   }
 });
